@@ -10,7 +10,7 @@ import os
 import time
 import colorsys
 
-       
+
 class LaserTracker(object):
 
     def __init__(self, cam_width=640, cam_height=480, hue_min=5, hue_max=6,
@@ -35,6 +35,8 @@ class LaserTracker(object):
 
         """
 
+        self.debug = False
+
         self.cam_width = cam_width
         self.cam_height = cam_height
         self.hue_min = hue_min
@@ -53,12 +55,31 @@ class LaserTracker(object):
             'laser': None,
         }
 
+        # general colors
+        self.color_green = (0,255,0)
+        self.color_yellow = (0,255,255)
+        self.color_blue = (0,0,255)
+        self.color_red = (255,0,0)
+
         # array to store our shots
         self.shots = []
+        self.misses = []
         self.sounds = []
         self.gunshot1 = os.path.dirname(os.path.realpath(__file__)) + "/sounds/gun-gunshot-01.mp3"
+        self.shot_color = self.color_green
+        self.miss_color = self.color_yellow
+        self.shot_diameter = 3
 
-        # init the sound mixer:
+        # vars for drawing stuff, targets etc.
+        self.rectangle = False
+        self.startpointx = None
+        self.startpointy = None
+        self.targets = []
+        self.drawTarget = None
+        self.targetOutlineColor = self.color_green  
+        self.targetOutlineStroke = 1
+
+        # stuff for playing sounds
         pygame.mixer.init()
         pygame.mixer.music.load(self.gunshot1)
 
@@ -110,14 +131,27 @@ class LaserTracker(object):
             sys.exit(0)
 
 
+    def shot_is_on_target(self, shot):
+        if not self.targets:
+            return True
+
+        hit = False
+
+        sx, sy = shot
+
+        for target in self.targets:
+            x1, y1, x2, y2 = target
+            if (sx >= x1) and (sx <= x2) and (sy >= y1) and (sy <= y2):
+                hit = True
+                break
+
+        return hit
+
 
     def detect(self, frame):
         hsv_img = cv2.cvtColor(frame, cv.CV_BGR2HSV)
 
         
-        #LASER_MIN = np.array([0, 0, 230],np.uint8)
-        #LASER_MAX = np.array([8, 115, 255],np.uint8)
-
         LASER_MIN = colorsys.rgb_to_hsv(255,207,187)
         LASER_MAX = colorsys.rgb_to_hsv(255,72,187)
 
@@ -135,18 +169,26 @@ class LaserTracker(object):
             else:
                 center = int(x), int(y)
 
-            #sys.stdout.write("Radius: " + str(radius) + "\n")
+            if self.debug:
+                sys.stdout.write("Shot Radius: " + str(radius) + "\n")
 
+            # IF the radius renders as a legit detection of the laser
             if radius > 1.5 and radius < 3:
-                # draw the circle and centroid on the frame,
-                # then update the list of tracked points
-                # cv2.circle(frame, (int(x), int(y)), int(radius),(0, 255, 255), 2)
-                # cv2.circle(frame, center, 5, (0, 255, 0), -1)
+                if self.debug:
+                    cv2.circle(frame, (int(x), int(y)), int(radius),(0, 255, 255), 2)
+                    cv2.circle(frame, center, 5, (0, 255, 0), -1)
 
-                #store the x/y of shot in array
-                if center not in self.shots:
-                    self.shots.append(center)
-                    pygame.mixer.music.play()
+
+                if self.shot_is_on_target(center):
+
+                    if center not in self.shots:
+                        self.shots.append(center)
+                        pygame.mixer.music.play()
+
+                else:
+
+                    if center not in self.misses:
+                        self.misses.append(center)
          
 
 
@@ -158,15 +200,36 @@ class LaserTracker(object):
         cv2.imshow('RGB_VideoFrame', frame)
 
 
+    def on_mouse_event(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.rectangle = True
+            self.startpointx = x
+            self.startpointy = y
+            if self.debug:
+                print('Down', x, y)
+
+        elif event == cv2.EVENT_LBUTTONUP:
+            self.rectangle = False
+            self.drawTarget = None
+            self.targets.append([self.startpointx, self.startpointy, x, y])
+            if self.debug:
+                print('Up', x, y)
+
+        elif event == cv2.EVENT_MOUSEMOVE:
+            if self.rectangle:
+                self.drawTarget = [self.startpointx, self.startpointy, x, y]
+                if self.debug:
+                    print('Move', self.startpointx, self.startpointy, x, y)
+
 
     def run(self):
         sys.stdout.write("Using OpenCV version: {0}\n".format(cv2.__version__))
 
-        time.sleep(2) #delay 5 seconds
+        #time.sleep(3)
 
         # create output windows
-        self.create_and_position_window('RGB_VideoFrame',
-            10 + self.cam_width, 0)
+        self.create_and_position_window('RGB_VideoFrame', 10 + self.cam_width, 0)
+
         if self.display_thresholds:
             self.create_and_position_window('Thresholded_HSV_Image', 10, 10)
             self.create_and_position_window('Hue', 20, 20)
@@ -175,6 +238,8 @@ class LaserTracker(object):
 
         # Set up the camer captures
         self.setup_camera_capture()
+
+        cv2.setMouseCallback('RGB_VideoFrame',self.on_mouse_event)
 
         # constant loop from the webcam feed
         while True:
@@ -186,11 +251,32 @@ class LaserTracker(object):
                 sys.exit(1)
 
 
+            # detect any laser shots
             self.detect(frame)
             
-            # draw where the laser is detected w/ a 3px green circle
+
+            # draw valid shots
             for shot in self.shots:
-                cv2.circle(frame, shot, 3, (0,255,0), -1)
+                cv2.circle(frame, shot, self.shot_diameter, self.shot_color, -1)
+
+            # draw misses
+            for miss in self.misses:
+                cv2.circle(frame, miss, self.shot_diameter, self.miss_color, -1)
+
+            # draw any defined targets
+            for tgt in self.targets:
+                cv2.rectangle(frame,(tgt[0],tgt[1]),(tgt[2],tgt[3]),
+                    self.targetOutlineColor,
+                    self.targetOutlineStroke)
+
+            # draw target currently being drawn if any
+            if self.drawTarget:
+                cv2.rectangle(frame,
+                    (self.drawTarget[0],self.drawTarget[1]),
+                    (self.drawTarget[2],self.drawTarget[3]),
+                    self.targetOutlineColor,
+                    self.targetOutlineStroke)
+
 
             self.display(frame)
 
@@ -259,4 +345,5 @@ if __name__ == '__main__':
         val_max=params.valmax,
         display_thresholds=params.display
     )
+
     tracker.run()
