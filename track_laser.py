@@ -201,6 +201,11 @@ class LaserTracker(object):
 
 
     def on_mouse_event(self, event, x, y, flags, param):
+
+        if event == cv2.EVENT_RBUTTONDOWN:
+            if self.targets:
+                self.targets.pop(-1)
+
         if event == cv2.EVENT_LBUTTONDOWN:
             self.rectangle = True
             self.startpointx = x
@@ -276,7 +281,6 @@ class LaserTracker(object):
                     (self.drawTarget[2],self.drawTarget[3]),
                     self.targetOutlineColor,
                     self.targetOutlineStroke)
-
 
             self.display(frame)
 
