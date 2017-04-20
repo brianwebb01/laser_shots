@@ -126,8 +126,7 @@ class LaserTracker(object):
     def handle_quit(self, delay=10):
         """Quit the program if the user presses "Esc" or "q"."""
         key = cv2.waitKey(delay)
-        c = chr(key & 255)
-        if c in ['q', 'Q', chr(27)]:
+        if key == ord('q'):
             sys.exit(0)
 
 
