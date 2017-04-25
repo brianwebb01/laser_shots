@@ -4,11 +4,14 @@ from cv2 import cv
 import cv2
 import sys
 import numpy as np
-import serial
 import pygame
 import os
 import time
 import colorsys
+import Tkinter as tk
+from PIL import Image
+from PIL import ImageTk
+import tkMessageBox
 
 
 class LaserTracker(object):
@@ -35,7 +38,7 @@ class LaserTracker(object):
 
         """
 
-        self.debug = False
+        self.debug = True
 
         self.cam_width = cam_width
         self.cam_height = cam_height
@@ -83,16 +86,25 @@ class LaserTracker(object):
         pygame.mixer.init()
         pygame.mixer.music.load(self.gunshot1)
 
+        self.window = tk.Tk()
+        self.window.resizable(width=False, height=False)
+        self.window.wm_title('Laser Tracker')
+        self.window.config(background="#FFFFFF")
+        self.window.protocol("WM_DELETE_WINDOW", self.handle_quit)
+        self.window.bind("q", self.handle_quit)
+        self.window.bind('<Key>', self.on_key_event)
 
-    def create_and_position_window(self, name, xpos, ypos):
-        """Creates a named widow placing it on the screen at (xpos, ypos)."""
-        # Create a window
-        cv2.namedWindow(name, cv2.CV_WINDOW_AUTOSIZE)
-        # Resize it to the size of the camera image
-        cv2.resizeWindow(name, self.cam_width, self.cam_height)
-        # Move to (xpos,ypos) on the screen
-        cv2.moveWindow(name, xpos, ypos)
+        #Graphics window
+        self.imageFrame = tk.Frame(self.window, width=320, height=240)
+        self.imageFrame.grid(row=0, column=0, padx=10, pady=2)
 
+        #Capture video frames
+        self.lmain = tk.Label(self.imageFrame)
+        self.lmain.grid(row=0, column=0)
+        self.lmain.bind("<Button-1>", self.on_mouse_event)
+        self.lmain.bind("<ButtonRelease-1>", self.on_mouse_event)
+        self.lmain.bind("<Button-2>", self.on_mouse_event)
+        self.lmain.bind("<Motion>", self.on_mouse_event)
 
 
     def setup_camera_capture(self, device_num=0):
@@ -119,15 +131,14 @@ class LaserTracker(object):
         self.capture.set(cv.CV_CAP_PROP_FRAME_WIDTH, self.cam_width)
         self.capture.set(cv.CV_CAP_PROP_FRAME_HEIGHT, self.cam_height)
 
+        self.window.geometry('{}x{}'.format(int((self.cam_width * 1.5)), self.cam_height + 10))
+
         return self.capture
 
 
 
     def handle_quit(self, delay=10):
-        """Quit the program if the user presses "Esc" or "q"."""
-        key = cv2.waitKey(delay)
-        if key == ord('q'):
-            sys.exit(0)
+        sys.exit(0)
 
 
     def shot_is_on_target(self, shot):
@@ -190,40 +201,96 @@ class LaserTracker(object):
                         self.misses.append(center)
          
 
+    def show_frame(self):
+
+        success, frame = self.capture.read()
+
+        if not success:
+            # no image captured... end the processing
+            sys.stderr.write("Could not read camera frame. Quitting\n")
+            sys.exit(1)
+
+        #frame = cv2.flip(frame, 1)
+
+        self.detect(frame)
+
+        self.draw_targets(frame)
+
+        self.draw_shots(frame)
+
+        cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+        img = Image.fromarray(cv2image)
+        imgtk = ImageTk.PhotoImage(image=img)
+        self.lmain.imgtk = imgtk
+        self.lmain.configure(image=imgtk)
+        self.lmain.after(10, self.show_frame)     
 
 
-    def display(self, frame):
-        """Display the combined image and (optionally) all other image channels
-        NOTE: default color space in OpenCV is BGR.
-        """
-        cv2.imshow('RGB_VideoFrame', frame)
+    def draw_shots(self, frame):
+        # draw valid shots
+        for shot in self.shots:
+            cv2.circle(frame, shot, self.shot_diameter, self.shot_color, -1)
+
+        # draw misses
+        for miss in self.misses:
+            cv2.circle(frame, miss, self.shot_diameter, self.miss_color, -1)
 
 
-    def on_mouse_event(self, event, x, y, flags, param):
+    def draw_targets(self, frame):
+        # draw any defined targets
+        for tgt in self.targets:
+            x1, y1, x2, y2 = tgt
+            cv2.rectangle(frame,(x1, y1), (x2, y2),
+                self.targetOutlineColor,
+                self.targetOutlineStroke)
 
-        if event == cv2.EVENT_RBUTTONDOWN:
+        # draw target currently being drawn if any
+        if self.drawTarget:
+            x1, y1, x2, y2 = self.drawTarget
+            cv2.rectangle(frame,
+                (x1,y1),
+                (x2,y2),
+                self.targetOutlineColor,
+                self.targetOutlineStroke)
+
+
+
+    def on_key_event(self, event):
+
+        if self.debug:
+            print("Key pressed:")
+            print("char: ", event.char, "keycode: ", event.keycode)
+            print "pressed", repr(event.char)
+
+        if event.char == 't':
             if self.targets:
                 self.targets.pop(-1)
 
-        if event == cv2.EVENT_LBUTTONDOWN:
-            self.rectangle = True
-            self.startpointx = x
-            self.startpointy = y
-            if self.debug:
-                print('Down', x, y)
 
-        elif event == cv2.EVENT_LBUTTONUP:
+    def on_mouse_event(self, event):
+
+        if self.debug:
+            print(event.type)
+
+        if event.type == '4': #'<Button-1>':
+            self.rectangle = True
+            self.startpointx = event.x
+            self.startpointy = event.y
+            if self.debug:
+                print('Down', event.x, event.y)
+
+        elif event.type == '5': #'<ButtonRelease-1>':
             self.rectangle = False
             self.drawTarget = None
-            self.targets.append([self.startpointx, self.startpointy, x, y])
+            self.targets.append([self.startpointx, self.startpointy, event.x, event.y])
             if self.debug:
-                print('Up', x, y)
+                print('Up', event.x, event.y)
 
-        elif event == cv2.EVENT_MOUSEMOVE:
+        elif event.type == '6': #'<Motion>':
             if self.rectangle:
-                self.drawTarget = [self.startpointx, self.startpointy, x, y]
+                self.drawTarget = [self.startpointx, self.startpointy, event.x, event.y]
                 if self.debug:
-                    print('Move', self.startpointx, self.startpointy, x, y)
+                    print('Move', self.startpointx, self.startpointy, event.x, event.y)
 
 
     def run(self):
@@ -231,62 +298,14 @@ class LaserTracker(object):
 
         #time.sleep(3)
 
-        # create output windows
-        self.create_and_position_window('RGB_VideoFrame', 10 + self.cam_width, 0)
-
-        if self.display_thresholds:
-            self.create_and_position_window('Thresholded_HSV_Image', 10, 10)
-            self.create_and_position_window('Hue', 20, 20)
-            self.create_and_position_window('Saturation', 30, 30)
-            self.create_and_position_window('Value', 40, 40)
-
         # Set up the camer captures
         self.setup_camera_capture()
 
-        cv2.setMouseCallback('RGB_VideoFrame',self.on_mouse_event)
+        self.show_frame()
 
-        # constant loop from the webcam feed
-        while True:
-            # 1. capture the current image
-            success, frame = self.capture.read()
-            if not success:
-                # no image captured... end the processing
-                sys.stderr.write("Could not read camera frame. Quitting\n")
-                sys.exit(1)
+        self.window.mainloop()
 
-
-            # detect any laser shots
-            self.detect(frame)
-            
-
-            # draw valid shots
-            for shot in self.shots:
-                cv2.circle(frame, shot, self.shot_diameter, self.shot_color, -1)
-
-            # draw misses
-            for miss in self.misses:
-                cv2.circle(frame, miss, self.shot_diameter, self.miss_color, -1)
-
-            # draw any defined targets
-            for tgt in self.targets:
-                cv2.rectangle(frame,(tgt[0],tgt[1]),(tgt[2],tgt[3]),
-                    self.targetOutlineColor,
-                    self.targetOutlineStroke)
-
-            # draw target currently being drawn if any
-            if self.drawTarget:
-                cv2.rectangle(frame,
-                    (self.drawTarget[0],self.drawTarget[1]),
-                    (self.drawTarget[2],self.drawTarget[3]),
-                    self.targetOutlineColor,
-                    self.targetOutlineStroke)
-
-            self.display(frame)
-
-
-            self.handle_quit()
-
-
+        #cv2.setMouseCallback('RGB_VideoFrame',self.on_mouse_event)
 
 
 if __name__ == '__main__':
