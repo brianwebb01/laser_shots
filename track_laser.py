@@ -9,8 +9,12 @@ import os
 import time
 import colorsys
 import Tkinter as tk
+from Tkinter import *
+import ttk
 from PIL import Image
 from PIL import ImageTk
+import threading
+import Queue
 import tkMessageBox
 
 
@@ -38,8 +42,9 @@ class LaserTracker(object):
 
         """
 
-        self.debug = True
+        self.debug = False
 
+        # camera settings
         self.cam_width = cam_width
         self.cam_height = cam_height
         self.hue_min = hue_min
@@ -50,6 +55,13 @@ class LaserTracker(object):
         self.val_max = val_max
         self.display_thresholds = display_thresholds
 
+
+        self.camera_frame_queue = Queue.Queue()
+        self.put_frame_thread = None
+        self.get_frame_thread = None
+        self.is_running = False
+
+        # laser color capture settings
         self.capture = None  # camera capture device
         self.channels = {
             'hue': None,
@@ -58,19 +70,20 @@ class LaserTracker(object):
             'laser': None,
         }
 
-        # general colors
+        # general colors defined in HSV
         self.color_green = (0,255,0)
         self.color_yellow = (0,255,255)
         self.color_blue = (0,0,255)
-        self.color_red = (255,0,0)
+        self.color_red = (0,1,255)
+        self.color_black = (0,0,0)
 
         # array to store our shots
         self.shots = []
         self.misses = []
         self.sounds = []
         self.gunshot1 = os.path.dirname(os.path.realpath(__file__)) + "/sounds/gun-gunshot-01.mp3"
-        self.shot_color = self.color_green
-        self.miss_color = self.color_yellow
+        self.shot_color = self.color_red
+        self.miss_color = self.color_black
         self.shot_diameter = 3
 
         # vars for drawing stuff, targets etc.
@@ -86,6 +99,8 @@ class LaserTracker(object):
         pygame.mixer.init()
         pygame.mixer.music.load(self.gunshot1)
 
+
+        #UI configs
         self.window = tk.Tk()
         self.window.resizable(width=False, height=False)
         self.window.wm_title('Laser Tracker')
@@ -96,7 +111,7 @@ class LaserTracker(object):
 
         #Graphics window
         self.imageFrame = tk.Frame(self.window, width=320, height=240)
-        self.imageFrame.grid(row=0, column=0, padx=10, pady=2)
+        self.imageFrame.grid(row=0, column=0, padx=0, pady=0)
 
         #Capture video frames
         self.lmain = tk.Label(self.imageFrame)
@@ -105,6 +120,85 @@ class LaserTracker(object):
         self.lmain.bind("<ButtonRelease-1>", self.on_mouse_event)
         self.lmain.bind("<Button-2>", self.on_mouse_event)
         self.lmain.bind("<Motion>", self.on_mouse_event)
+
+
+        # Our time structure [min, sec, centsec]
+        self.mainTimer = [0, 0, 0]
+        self.mainTimerPattern = '{0:02d}:{1:02d}:{2:02d}'
+        self.mainTimerText = tk.Label(self.window, text="00:00:00", font=("Helvetica", 48))
+        self.mainTimerText.place(x=700, y=0)
+        self.timerRunning = False
+
+        # shot data tree
+        self.shotData = ttk.Treeview(self.window, selectmode="extended", height=17,
+            columns=('Shot #', 'Shot Time', 'Split', 'Target #', 'Total Time'))
+        self.shotData.heading('#0', text="Shot #")
+        self.shotData.heading('#1', text="Shot Time")
+        self.shotData.heading('#2', text="Split")
+        self.shotData.heading('#3', text="Target #")
+        self.shotData.heading('#4', text="Total Time")
+        self.shotData.column('#1', minwidth=0,width=75, stretch=NO, anchor=tk.CENTER)
+        self.shotData.column('#2', minwidth=0,width=75, stretch=NO, anchor=tk.CENTER)
+        self.shotData.column('#3', minwidth=0,width=75, stretch=NO, anchor=tk.CENTER)
+        self.shotData.column('#4', minwidth=0,width=75, stretch=NO, anchor=tk.CENTER)
+        self.shotData.column('#0', minwidth=0,width=50, stretch=NO, anchor=tk.CENTER)
+        self.shotData.column('#5', minwidth=0,width=0) #kill the empty last column
+        self.shotData.tag_configure('error', background='red', foreground='white')
+        self.shotData.tag_configure('miss', background='black', foreground='white')
+        self.shotData.place(x=650, y=60)
+
+
+        for i in [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]:
+            if i == 3:
+                tags = ('error')
+            elif i == 5:    
+                tags = ('miss')
+            else:
+                tags = ()
+            self.shotData.insert('', 'end', text=i, values=("0.10", "0.20", "A", "1.10"), tags=tags)
+
+        # control buttons
+        self.button_start = tk.Button(self.window, text="Start", command=self.start)
+        self.button_start.place(x=647, y=457)
+        self.button_stop = tk.Button(self.window, text="Stop", command=self.stop)
+        self.button_stop.place(x=712, y=457)
+        self.button_reset = tk.Button(self.window, text="Reset", command=self.reset)
+        self.button_reset.place(x=777, y=457)
+
+    def start(self):
+        print("start")
+        self.timerRunning = True
+
+    def stop(self):
+        print("stop")    
+        self.timerRunning = False
+
+    def reset(self):
+        print("reset")
+        self.mainTimer = [0, 0, 0]
+        self.mainTimerText.configure(text='00:00:00')
+
+    def update_timeText(self):
+        if (self.timerRunning):
+            # Every time this function is called, 
+            # we will increment 1 centisecond (1/100 of a second)
+            self.mainTimer[2] += 1
+            
+            # Every 100 centisecond is equal to 1 second
+            if (self.mainTimer[2] >= 100):
+                self.mainTimer[2] = 0
+                self.mainTimer[1] += 1
+            # Every 60 seconds is equal to 1 min
+            if (self.mainTimer[1] >= 60):
+                self.mainTimer[0] += 1
+                self.mainTimer[1] = 0
+            # We create our time string here
+            timeString = self.mainTimerPattern.format(self.mainTimer[0], self.mainTimer[1], self.mainTimer[2])
+            # Update the timeText Label box with the current time
+            self.mainTimerText.configure(text=timeString)
+            # Call the update_timeText() function after 1 centisecond
+        self.window.after(10, self.update_timeText)    
+
 
 
     def setup_camera_capture(self, device_num=0):
@@ -131,13 +225,23 @@ class LaserTracker(object):
         self.capture.set(cv.CV_CAP_PROP_FRAME_WIDTH, self.cam_width)
         self.capture.set(cv.CV_CAP_PROP_FRAME_HEIGHT, self.cam_height)
 
-        self.window.geometry('{}x{}'.format(int((self.cam_width * 1.5)), self.cam_height + 10))
+        self.window.geometry('{}x{}'.format(int((self.cam_width + 375)), self.cam_height + 10))
 
         return self.capture
 
 
 
     def handle_quit(self, delay=10):
+        self.is_running = False
+
+        if self.put_frame_thread.isAlive():
+            self.put_frame_thread._Thread__stop()
+            self.put_frame_thread = None
+
+        if self.get_frame_thread.isAlive():
+            self.get_frame_thread._Thread__stop()
+            self.get_frame_thread = None
+
         sys.exit(0)
 
 
@@ -200,30 +304,43 @@ class LaserTracker(object):
                     if center not in self.misses:
                         self.misses.append(center)
          
+    def capture_frame(self):
+        if self.is_running:
+            success, frame = self.capture.read()
+
+            if not success:
+                # no image captured... end the processing
+                sys.stderr.write("Could not read camera frame. Quitting\n")
+                sys.exit(1)
+
+            if self.camera_frame_queue.empty():
+                self.camera_frame_queue.put(frame)
+
+            time.sleep(1/250.0)
+            self.capture_frame()
+
 
     def show_frame(self):
 
-        success, frame = self.capture.read()
+        if self.is_running:
+            if not self.camera_frame_queue.empty():
+                frame = self.camera_frame_queue.get()
+                #frame = cv2.flip(frame, 1)
 
-        if not success:
-            # no image captured... end the processing
-            sys.stderr.write("Could not read camera frame. Quitting\n")
-            sys.exit(1)
+                self.detect(frame)
 
-        #frame = cv2.flip(frame, 1)
+                self.draw_targets(frame)
 
-        self.detect(frame)
+                self.draw_shots(frame)
 
-        self.draw_targets(frame)
+                cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+                img = Image.fromarray(cv2image)
+                imgtk = ImageTk.PhotoImage(image=img)
+                self.lmain.imgtk = imgtk
+                self.lmain.configure(image=imgtk)
 
-        self.draw_shots(frame)
-
-        cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
-        img = Image.fromarray(cv2image)
-        imgtk = ImageTk.PhotoImage(image=img)
-        self.lmain.imgtk = imgtk
-        self.lmain.configure(image=imgtk)
-        self.lmain.after(10, self.show_frame)     
+            time.sleep(1/500.0)
+            self.show_frame()
 
 
     def draw_shots(self, frame):
@@ -296,16 +413,20 @@ class LaserTracker(object):
     def run(self):
         sys.stdout.write("Using OpenCV version: {0}\n".format(cv2.__version__))
 
-        #time.sleep(3)
-
-        # Set up the camer captures
         self.setup_camera_capture()
 
-        self.show_frame()
+        #self.show_frame()
+
+        self.is_running = True
+        self.put_frame_thread = threading.Thread(target=self.capture_frame)
+        self.put_frame_thread.start()
+        self.get_frame_thread = threading.Thread(target=self.show_frame)
+        self.get_frame_thread.start()
+
+
+        self.update_timeText()
 
         self.window.mainloop()
-
-        #cv2.setMouseCallback('RGB_VideoFrame',self.on_mouse_event)
 
 
 if __name__ == '__main__':
