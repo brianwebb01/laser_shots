@@ -56,6 +56,7 @@ class LaserTracker(object):
         self.display_thresholds = display_thresholds
 
 
+        #threading / queue vars
         self.camera_frame_queue = Queue.Queue()
         self.put_frame_thread = None
         self.get_frame_thread = None
@@ -82,9 +83,13 @@ class LaserTracker(object):
         self.misses = []
         self.sounds = []
         self.gunshot1 = os.path.dirname(os.path.realpath(__file__)) + "/sounds/gun-gunshot-01.mp3"
+        self.beep1 = os.path.dirname(os.path.realpath(__file__)) + "/sounds/beep-01.mp3"
+        self.beep2 = os.path.dirname(os.path.realpath(__file__)) + "/sounds/beep-02.mp3"
+        self.beep3 = os.path.dirname(os.path.realpath(__file__)) + "/sounds/beep-03.mp3"
         self.shot_color = self.color_red
         self.miss_color = self.color_black
         self.shot_diameter = 3
+        self.should_log_shots = False
 
         # vars for drawing stuff, targets etc.
         self.rectangle = False
@@ -97,7 +102,6 @@ class LaserTracker(object):
 
         # stuff for playing sounds
         pygame.mixer.init()
-        pygame.mixer.music.load(self.gunshot1)
 
 
         #UI configs
@@ -122,12 +126,16 @@ class LaserTracker(object):
         self.lmain.bind("<Motion>", self.on_mouse_event)
 
 
-        # Our time structure [min, sec, centsec]
-        self.mainTimer = [0, 0, 0]
-        self.mainTimerPattern = '{0:02d}:{1:02d}:{2:02d}'
-        self.mainTimerText = tk.Label(self.window, text="00:00:00", font=("Helvetica", 48))
-        self.mainTimerText.place(x=700, y=0)
+        # Our time structure
+        self.startTime = 0.0
+        self.elapsedTime = 0.0
+        self.parTime = False 
+        self.parTimeMet = False
+        self.mainTimerPattern = '%02i:%02i:%02i'
         self.timerRunning = False
+        self.shotTimes = []
+        self.mainTimerText = tk.Label(self.window, text="00:00.00", font=("Helvetica", 48))
+        self.mainTimerText.place(x=700, y=0)
 
         # shot data tree
         self.shotData = ttk.Treeview(self.window, selectmode="extended", height=17,
@@ -148,14 +156,28 @@ class LaserTracker(object):
         self.shotData.place(x=650, y=60)
 
 
-        for i in [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]:
-            if i == 3:
-                tags = ('error')
-            elif i == 5:    
-                tags = ('miss')
-            else:
-                tags = ()
-            self.shotData.insert('', 'end', text=i, values=("0.10", "0.20", "A", "1.10"), tags=tags)
+        # for i in [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]:
+        #     if i == 3:
+        #         tags = ('error')
+        #     elif i == 5:    
+        #         tags = ('miss')
+        #     else:
+        #         tags = ()
+        #     self.shotData.insert('', 'end', text=i, values=("0.10", "0.20", "A", "1.10"), tags=tags)
+
+
+        # settings entry
+        self.label_delay = tk.Label(self.window, text='Delay')
+        self.label_par = tk.Label(self.window, text='Par')
+        self.label_delay.place(x=647, y=398)
+        self.label_par.place(x=647, y=425)
+
+        self.entry_delay = tk.Entry(self.window, width=5)
+        self.entry_delay.insert(0, '0')
+        self.entry_par = tk.Entry(self.window, width=5)
+        self.entry_par.insert(0, '0')
+        self.entry_delay.place(x=700, y=398)
+        self.entry_par.place(x=700, y=425)
 
         # control buttons
         self.button_start = tk.Button(self.window, text="Start", command=self.start)
@@ -165,40 +187,157 @@ class LaserTracker(object):
         self.button_reset = tk.Button(self.window, text="Reset", command=self.reset)
         self.button_reset.place(x=777, y=457)
 
+
+    def log_shot(self, target_index):
+        self.play_sound("shot")
+        self.log_shot_details("hit", target_index)
+        
+
+
+    def log_miss(self):
+        self.play_sound("miss")
+        self.log_shot_details("miss")
+        
+
+
+    def log_shot_details(self, hit_miss, target_index=False):
+        if hit_miss == "hit":
+            tags = ()
+        elif hit_miss == "miss":
+            tags = ('miss')
+
+        shot_num = len(self.shots) + len(self.misses)
+
+        shot_time = time.time() - self.startTime
+        self.shotTimes.append(shot_time)
+        shot_time_str = self.time_format_elap(shot_time)
+        
+        if len(self.shotTimes) >= 2:
+            last_time = self.shotTimes[-2]
+            split_time = self.time_format_elap((shot_time - last_time))
+        else:
+            split_time = self.time_format_elap(0.0)
+        
+        if target_index == False:
+            target_num = 'Miss'
+        else:
+            target_num = str(target_index + 1)
+        
+        total_time = shot_time_str
+
+        self.shotData.insert('', 'end', 
+            text=shot_num, 
+            values=(shot_time_str, split_time, target_num, str(total_time)), 
+            tags=tags)
+
+
+    def play_sound(self, sound):
+        print(sound)
+
+        if sound == "start":
+            pygame.mixer.music.load(self.beep3)
+        elif sound == "par":
+            pygame.mixer.music.load(self.beep1)    
+        elif sound == "shot":
+            pygame.mixer.music.load(self.gunshot1)
+        elif sound == "miss":
+            pygame.mixer.music.load(self.beep1)
+
+        pygame.mixer.music.play()
+
+
+    def start_logging_shots(self):
+        if not self.should_log_shots:
+            self.should_log_shots = True;
+            if self.timerRunning:
+                self.play_sound("start")
+            
+
+
+    def time_par_time_met(self):
+        if (self.timerRunning):
+            self.parTimeMet = True;
+            self.should_log_shots = False;
+            self.stop()
+            self.play_sound("par")
+
+
+    def time_init(self):
+        delay = abs(float(self.entry_delay.get()))
+        if delay > 0:
+            self.elapsedTime = delay * -1
+        else:
+            self.elapsedTime = 0.0
+
+        self.time_set(self.elapsedTime)
+
+        par = abs(float(self.entry_par.get()))
+        if par > 0:
+            self.parTime = par
+        else:
+            self.parTime = False
+
+
+    def time_format_elap(self, elap):
+        minutes = int(elap/60)
+        seconds = int(elap - minutes*60.0)
+        hseconds = int((elap - minutes*60.0 - seconds)*100)
+        timeStr = self.mainTimerPattern % (abs(minutes), abs(seconds), abs(hseconds))
+        return timeStr
+
+
+    def time_set(self, elap):
+        if not self.should_log_shots:
+            if elap >= 0:
+                self.start_logging_shots()
+
+        if(self.parTime):
+            if(elap >= self.parTime):
+                self.time_par_time_met()
+
+        timeStr = self.time_format_elap(elap)
+        self.mainTimerText.configure(text=timeStr)
+
+
+    def time_update(self):
+        if (self.timerRunning):
+            self.elapsedTime = time.time() - self.startTime
+            self.time_set(self.elapsedTime)
+            self.window.after(1, self.time_update)
+
+
     def start(self):
-        print("start")
-        self.timerRunning = True
+        if self.debug:
+            print("button start")
+
+        if not self.timerRunning:
+            self.time_init()
+            if self.elapsedTime < 0:
+                self.should_log_shots = False
+            self.startTime = time.time() - self.elapsedTime
+            self.timerRunning = True
+            self.time_update()
+
 
     def stop(self):
-        print("stop")    
-        self.timerRunning = False
+        if self.debug:
+            print("button stop")
+
+        if self.timerRunning:
+            self.timerRunning = False
+            if self.parTimeMet:
+                self.elapsedTime = self.parTime
+            else:    
+                self.elapsedTime = time.time() - self.startTime
+            self.time_set(self.elapsedTime)
+
 
     def reset(self):
-        print("reset")
-        self.mainTimer = [0, 0, 0]
-        self.mainTimerText.configure(text='00:00:00')
+        if self.debug:
+            print("button reset")
 
-    def update_timeText(self):
-        if (self.timerRunning):
-            # Every time this function is called, 
-            # we will increment 1 centisecond (1/100 of a second)
-            self.mainTimer[2] += 1
-            
-            # Every 100 centisecond is equal to 1 second
-            if (self.mainTimer[2] >= 100):
-                self.mainTimer[2] = 0
-                self.mainTimer[1] += 1
-            # Every 60 seconds is equal to 1 min
-            if (self.mainTimer[1] >= 60):
-                self.mainTimer[0] += 1
-                self.mainTimer[1] = 0
-            # We create our time string here
-            timeString = self.mainTimerPattern.format(self.mainTimer[0], self.mainTimer[1], self.mainTimer[2])
-            # Update the timeText Label box with the current time
-            self.mainTimerText.configure(text=timeString)
-            # Call the update_timeText() function after 1 centisecond
-        self.window.after(10, self.update_timeText)    
-
+        self.startTime = time.time()
+        self.time_init()
 
 
     def setup_camera_capture(self, device_num=0):
@@ -230,7 +369,6 @@ class LaserTracker(object):
         return self.capture
 
 
-
     def handle_quit(self, delay=10):
         self.is_running = False
 
@@ -249,20 +387,24 @@ class LaserTracker(object):
         if not self.targets:
             return True
 
-        hit = False
+        hit = -1
 
         sx, sy = shot
 
         for target in self.targets:
             x1, y1, x2, y2 = target
             if (sx >= x1) and (sx <= x2) and (sy >= y1) and (sy <= y2):
-                hit = True
+                hit = self.targets.index(target)
                 break
 
         return hit
 
 
     def detect(self, frame):
+
+        if not self.should_log_shots:
+            return
+
         hsv_img = cv2.cvtColor(frame, cv.CV_BGR2HSV)
 
         
@@ -293,17 +435,20 @@ class LaserTracker(object):
                     cv2.circle(frame, center, 5, (0, 255, 0), -1)
 
 
-                if self.shot_is_on_target(center):
+                on_target = self.shot_is_on_target(center)
+                if on_target >= 0:
 
                     if center not in self.shots:
                         self.shots.append(center)
-                        pygame.mixer.music.play()
+                        self.log_shot(on_target)
 
                 else:
 
                     if center not in self.misses:
                         self.misses.append(center)
-         
+                        self.log_miss()
+        
+
     def capture_frame(self):
         if self.is_running:
             success, frame = self.capture.read()
@@ -316,7 +461,8 @@ class LaserTracker(object):
             if self.camera_frame_queue.empty():
                 self.camera_frame_queue.put(frame)
 
-            time.sleep(1/250.0)
+            #time.sleep(1/250.0)
+            time.sleep(0.5)
             self.capture_frame()
 
 
@@ -339,7 +485,8 @@ class LaserTracker(object):
                 self.lmain.imgtk = imgtk
                 self.lmain.configure(image=imgtk)
 
-            time.sleep(1/500.0)
+            #time.sleep(1/500.0)
+            time.sleep(1)
             self.show_frame()
 
 
@@ -415,16 +562,13 @@ class LaserTracker(object):
 
         self.setup_camera_capture()
 
-        #self.show_frame()
-
         self.is_running = True
         self.put_frame_thread = threading.Thread(target=self.capture_frame)
         self.put_frame_thread.start()
         self.get_frame_thread = threading.Thread(target=self.show_frame)
         self.get_frame_thread.start()
 
-
-        self.update_timeText()
+        #self.time_init()
 
         self.window.mainloop()
 
