@@ -20,9 +20,7 @@ import tkMessageBox
 
 class LaserTracker(object):
 
-    def __init__(self, cam_width=640, cam_height=480, hue_min=5, hue_max=6,
-                 sat_min=50, sat_max=100, val_min=250, val_max=256,
-                 display_thresholds=False):
+    def __init__(self, cam_width=640, cam_height=480, hue_min=5, hue_max=6,sat_min=50, sat_max=100, val_min=250, val_max=256,display_thresholds=False):
         """
         * ``cam_width`` x ``cam_height`` -- This should be the size of the
         image coming from the camera. Default is 640x480.
@@ -43,6 +41,8 @@ class LaserTracker(object):
         """
 
         self.debug = False
+
+        sys.setrecursionlimit(10000)
 
         # camera settings
         self.cam_width = cam_width
@@ -132,6 +132,7 @@ class LaserTracker(object):
         self.parTime = False 
         self.parTimeMet = False
         self.mainTimerPattern = '%02i:%02i:%02i'
+        self.shotLogPattern = '%02i.%02i'
         self.timerRunning = False
         self.shotTimes = []
         self.mainTimerText = tk.Label(self.window, text="00:00.00", font=("Helvetica", 48))
@@ -154,16 +155,6 @@ class LaserTracker(object):
         self.shotData.tag_configure('error', background='red', foreground='white')
         self.shotData.tag_configure('miss', background='black', foreground='white')
         self.shotData.place(x=650, y=60)
-
-
-        # for i in [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]:
-        #     if i == 3:
-        #         tags = ('error')
-        #     elif i == 5:    
-        #         tags = ('miss')
-        #     else:
-        #         tags = ()
-        #     self.shotData.insert('', 'end', text=i, values=("0.10", "0.20", "A", "1.10"), tags=tags)
 
 
         # settings entry
@@ -190,15 +181,15 @@ class LaserTracker(object):
 
     def log_shot(self, target_index):
         self.play_sound("shot")
-        self.log_shot_details("hit", target_index)
+        if self.timerRunning:
+            self.log_shot_details("hit", target_index)
         
-
 
     def log_miss(self):
         self.play_sound("miss")
-        self.log_shot_details("miss")
+        if self.timerRunning:
+            self.log_shot_details("miss")
         
-
 
     def log_shot_details(self, hit_miss, target_index=False):
         if hit_miss == "hit":
@@ -210,16 +201,18 @@ class LaserTracker(object):
 
         shot_time = time.time() - self.startTime
         self.shotTimes.append(shot_time)
-        shot_time_str = self.time_format_elap(shot_time)
+        shot_time_str = self.time_format_shot_log(shot_time)
         
         if len(self.shotTimes) >= 2:
             last_time = self.shotTimes[-2]
-            split_time = self.time_format_elap((shot_time - last_time))
+            split_time = self.time_format_shot_log((shot_time - last_time))
         else:
-            split_time = self.time_format_elap(0.0)
+            split_time = self.time_format_shot_log(0.0)
         
-        if target_index == False:
+        if target_index == -2:
             target_num = 'Miss'
+        elif target_index == -1:
+            target_num = '-'
         else:
             target_num = str(target_index + 1)
         
@@ -241,7 +234,7 @@ class LaserTracker(object):
         elif sound == "shot":
             pygame.mixer.music.load(self.gunshot1)
         elif sound == "miss":
-            pygame.mixer.music.load(self.beep1)
+            pygame.mixer.music.load(self.beep2)
 
         pygame.mixer.music.play()
 
@@ -252,7 +245,6 @@ class LaserTracker(object):
             if self.timerRunning:
                 self.play_sound("start")
             
-
 
     def time_par_time_met(self):
         if (self.timerRunning):
@@ -276,6 +268,13 @@ class LaserTracker(object):
             self.parTime = par
         else:
             self.parTime = False
+
+
+    def time_format_shot_log(self, elap):
+        seconds = int(elap)
+        hseconds = int((elap - seconds)*100)
+        timeStr = self.shotLogPattern % (abs(seconds), abs(hseconds))
+        return timeStr
 
 
     def time_format_elap(self, elap):
@@ -303,7 +302,7 @@ class LaserTracker(object):
         if (self.timerRunning):
             self.elapsedTime = time.time() - self.startTime
             self.time_set(self.elapsedTime)
-            self.window.after(1, self.time_update)
+            self.window.after(50, self.time_update)
 
 
     def start(self):
@@ -338,6 +337,7 @@ class LaserTracker(object):
 
         self.startTime = time.time()
         self.time_init()
+        self.shotData.delete(*self.shotData.get_children())
 
 
     def setup_camera_capture(self, device_num=0):
@@ -385,9 +385,9 @@ class LaserTracker(object):
 
     def shot_is_on_target(self, shot):
         if not self.targets:
-            return True
+            return -1
 
-        hit = -1
+        hit = -2
 
         sx, sy = shot
 
@@ -436,10 +436,12 @@ class LaserTracker(object):
 
 
                 on_target = self.shot_is_on_target(center)
-                if on_target >= 0:
+                if on_target >= -1:
 
                     if center not in self.shots:
                         self.shots.append(center)
+                        if on_target == -1:
+                            on_target = False
                         self.log_shot(on_target)
 
                 else:
@@ -461,8 +463,7 @@ class LaserTracker(object):
             if self.camera_frame_queue.empty():
                 self.camera_frame_queue.put(frame)
 
-            #time.sleep(1/250.0)
-            time.sleep(0.5)
+            time.sleep(1/250.0) #4 milliseconds
             self.capture_frame()
 
 
@@ -471,6 +472,7 @@ class LaserTracker(object):
         if self.is_running:
             if not self.camera_frame_queue.empty():
                 frame = self.camera_frame_queue.get()
+
                 #frame = cv2.flip(frame, 1)
 
                 self.detect(frame)
@@ -485,8 +487,7 @@ class LaserTracker(object):
                 self.lmain.imgtk = imgtk
                 self.lmain.configure(image=imgtk)
 
-            #time.sleep(1/500.0)
-            time.sleep(1)
+            time.sleep(1/500.0) # 2 milliseconds
             self.show_frame()
 
 
@@ -516,7 +517,6 @@ class LaserTracker(object):
                 (x2,y2),
                 self.targetOutlineColor,
                 self.targetOutlineStroke)
-
 
 
     def on_key_event(self, event):
@@ -564,11 +564,11 @@ class LaserTracker(object):
 
         self.is_running = True
         self.put_frame_thread = threading.Thread(target=self.capture_frame)
-        self.put_frame_thread.start()
         self.get_frame_thread = threading.Thread(target=self.show_frame)
+        self.put_frame_thread.start()
         self.get_frame_thread.start()
 
-        #self.time_init()
+        self.time_init()
 
         self.window.mainloop()
 
