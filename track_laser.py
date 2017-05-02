@@ -217,8 +217,7 @@ class LaserTracker(object):
 
 
     def play_sound(self, sound):
-        print(sound)
-
+        
         if sound == "start":
             pygame.mixer.music.load(self.beep3)
         elif sound == "par":
@@ -294,7 +293,7 @@ class LaserTracker(object):
         if (self.timerRunning):
             self.elapsedTime = time.time() - self.startTime
             self.time_set(self.elapsedTime)
-            self.window.after(50, self.time_update)
+            self.window.after(25, self.time_update)
 
 
     def start(self):
@@ -314,6 +313,7 @@ class LaserTracker(object):
         if self.debug:
             print("button stop")
 
+        self.should_log_shots = False
         if self.timerRunning:
             self.timerRunning = False
             if self.parTimeMet:
@@ -330,6 +330,8 @@ class LaserTracker(object):
         self.startTime = time.time()
         self.time_init()
         self.shotData.delete(*self.shotData.get_children())
+        self.shots = []
+        self.misses = []
 
 
     def setup_camera_capture(self, device_num=0):
@@ -446,7 +448,7 @@ class LaserTracker(object):
 
             self.show_frame(frame)
 
-            self.window.after(20, func=lambda: self.capture_frame())
+            self.window.after(50, func=lambda: self.capture_frame())
 
 
     def show_frame(self, frame):
@@ -544,6 +546,8 @@ class LaserTracker(object):
         self.window.after(0, func=lambda: self.capture_frame())
 
         self.time_init()
+
+        self.should_log_shots = False
 
         self.window.mainloop()
 
