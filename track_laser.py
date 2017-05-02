@@ -13,8 +13,6 @@ from Tkinter import *
 import ttk
 from PIL import Image
 from PIL import ImageTk
-import threading
-import Queue
 import tkMessageBox
 
 
@@ -42,8 +40,6 @@ class LaserTracker(object):
 
         self.debug = False
 
-        sys.setrecursionlimit(10000)
-
         # camera settings
         self.cam_width = cam_width
         self.cam_height = cam_height
@@ -56,10 +52,6 @@ class LaserTracker(object):
         self.display_thresholds = display_thresholds
 
 
-        #threading / queue vars
-        self.camera_frame_queue = Queue.Queue()
-        self.put_frame_thread = None
-        self.get_frame_thread = None
         self.is_running = False
 
         # laser color capture settings
@@ -171,11 +163,11 @@ class LaserTracker(object):
         self.entry_par.place(x=700, y=425)
 
         # control buttons
-        self.button_start = tk.Button(self.window, text="Start", command=self.start)
+        self.button_start = tk.Button(self.window, text="Start", command=lambda: self.start())
         self.button_start.place(x=647, y=457)
-        self.button_stop = tk.Button(self.window, text="Stop", command=self.stop)
+        self.button_stop = tk.Button(self.window, text="Stop", command=lambda: self.stop())
         self.button_stop.place(x=712, y=457)
-        self.button_reset = tk.Button(self.window, text="Reset", command=self.reset)
+        self.button_reset = tk.Button(self.window, text="Reset", command=lambda: self.reset())
         self.button_reset.place(x=777, y=457)
 
 
@@ -371,15 +363,7 @@ class LaserTracker(object):
 
     def handle_quit(self, delay=10):
         self.is_running = False
-
-        if self.put_frame_thread.isAlive():
-            self.put_frame_thread._Thread__stop()
-            self.put_frame_thread = None
-
-        if self.get_frame_thread.isAlive():
-            self.get_frame_thread._Thread__stop()
-            self.get_frame_thread = None
-
+        self.window.destroy()
         sys.exit(0)
 
 
@@ -460,35 +444,28 @@ class LaserTracker(object):
                 sys.stderr.write("Could not read camera frame. Quitting\n")
                 sys.exit(1)
 
-            if self.camera_frame_queue.empty():
-                self.camera_frame_queue.put(frame)
+            self.show_frame(frame)
 
-            time.sleep(1/250.0) #4 milliseconds
-            self.capture_frame()
+            self.window.after(20, func=lambda: self.capture_frame())
 
 
-    def show_frame(self):
+    def show_frame(self, frame):
 
         if self.is_running:
-            if not self.camera_frame_queue.empty():
-                frame = self.camera_frame_queue.get()
 
-                #frame = cv2.flip(frame, 1)
+            #frame = cv2.flip(frame, 1)
 
-                self.detect(frame)
+            self.detect(frame)
 
-                self.draw_targets(frame)
+            self.draw_targets(frame)
 
-                self.draw_shots(frame)
+            self.draw_shots(frame)
 
-                cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
-                img = Image.fromarray(cv2image)
-                imgtk = ImageTk.PhotoImage(image=img)
-                self.lmain.imgtk = imgtk
-                self.lmain.configure(image=imgtk)
-
-            time.sleep(1/500.0) # 2 milliseconds
-            self.show_frame()
+            cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+            img = Image.fromarray(cv2image)
+            imgtk = ImageTk.PhotoImage(image=img)
+            self.lmain.imgtk = imgtk
+            self.lmain.configure(image=imgtk)
 
 
     def draw_shots(self, frame):
@@ -563,10 +540,8 @@ class LaserTracker(object):
         self.setup_camera_capture()
 
         self.is_running = True
-        self.put_frame_thread = threading.Thread(target=self.capture_frame)
-        self.get_frame_thread = threading.Thread(target=self.show_frame)
-        self.put_frame_thread.start()
-        self.get_frame_thread.start()
+
+        self.window.after(0, func=lambda: self.capture_frame())
 
         self.time_init()
 
