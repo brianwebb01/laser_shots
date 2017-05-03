@@ -1,7 +1,7 @@
 import cv2
 
 class VideoCamera(object):
-    def __init__(self, device=0, cam_width=640, cam_height=480):
+    def __init__(self, device=0, cam_width=320, cam_height=240):
 
         self.device = device
 

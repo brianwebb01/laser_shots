@@ -18,7 +18,8 @@ import tkMessageBox
 
 class LaserTracker(object):
 
-    def __init__(self, cam_width=640, cam_height=480, hue_min=5, hue_max=6,sat_min=50, sat_max=100, val_min=250, val_max=256,display_thresholds=False):
+    def __init__(self, cam_width=640, cam_height=480, hue_min=5, hue_max=6, 
+    sat_min=50, sat_max=100, val_min=250, val_max=256, display_thresholds=False):
         """
         * ``cam_width`` x ``cam_height`` -- This should be the size of the
         image coming from the camera. Default is 640x480.
@@ -64,11 +65,11 @@ class LaserTracker(object):
         }
 
         # general colors defined in HSV
-        self.color_green = (0,255,0)
-        self.color_yellow = (0,255,255)
-        self.color_blue = (0,0,255)
-        self.color_red = (0,1,255)
-        self.color_black = (0,0,0)
+        self.color_green = (0, 255, 0)
+        self.color_yellow = (0, 255, 255)
+        self.color_blue = (0, 0, 255)
+        self.color_red = (0, 1, 255)
+        self.color_black = (0, 0, 0)
 
         # array to store our shots
         self.shots = []
