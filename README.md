@@ -18,7 +18,7 @@ The color of the targets and background they are presented on shouldn't have spe
 
 camera -> ~VideoCamera~
 
-detection -> ~LaserDetector~; TargetManager; ShotManager
+detection -> ~LaserDetector~; ~TargetManager~; ShotManager
 
 timer -> Timer
 

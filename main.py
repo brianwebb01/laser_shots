@@ -5,8 +5,7 @@ import cv2
 import Tkinter as tk
 from PIL import ImageTk, Image
 from camera import VideoCamera
-from detection import LaserDetector
-
+from detection import *
 
 class LaserShotsApp(tk.Tk):
 
@@ -16,6 +15,7 @@ class LaserShotsApp(tk.Tk):
         self.initialize()
 
     def initialize(self):
+        self.debug = True
         self.sidebar_width = 375
         self.frame_padding = 10
         self.camera_res_horiz = 320
@@ -23,9 +23,11 @@ class LaserShotsApp(tk.Tk):
         self.camera_frm_width = 640
         self.camera_frm_height = 480
 
-        # self.init_cameras([0,1])
-        self.init_cameras([0])
+        self.init_cameras([0,1])
+        #self.init_cameras([0])
         self.init_gui_elements()
+        self.target_manager = TargetManager()
+        self.shot_manager = ShotManager()
         self.show_video_feeds()
 
     def init_cameras(self, devices=[0]):
@@ -75,16 +77,25 @@ class LaserShotsApp(tk.Tk):
 
     def show_video_feeds(self):
         for camera in self.cameras:
+            camera_idx = self.cameras.index(camera)
 
             frame = camera.get_frame()
 
-            shot = LaserDetector(frame).detect('RED')
+            shot = LaserDetector(frame).detect(LaserDetector.LASER_RED, 1.0, 3.0)
+
+            if shot:
+                on_target = self.target_manager.shot_is_on_target(camera_idx, shot)
+                if on_target > TargetManager.MISS:
+                    self.shot_manager.log_hit(camera_idx, on_target, shot)
+                elif on_target == TargetManager.MISS:
+                    self.shot_manager.log_miss(camera_idx, shot)
 
             if shot:
                 x, y, r = shot
+                print("Shot: cam:" + str(camera_idx) + ", radius:" + str(r) + " at (" + str(x) + "," + str(y) + ")\n")
                 cv2.circle(frame, (int(x), int(y)), 20, (0, 0, 255), 2)
 
-            self.show_video_frame(frame, self.cameras.index(camera))
+            self.show_video_frame(frame, camera_idx)
 
         self.after(50, func=lambda: self.show_video_feeds())
 
