@@ -3,9 +3,11 @@
 
 import cv2
 import Tkinter as tk
-from PIL import ImageTk, Image
 from camera import VideoCamera
 from detection import *
+from viz import *
+from tracking import *
+
 
 class LaserShotsApp(tk.Tk):
 
@@ -23,10 +25,11 @@ class LaserShotsApp(tk.Tk):
         self.camera_frm_width = 640
         self.camera_frm_height = 480
 
-        self.init_cameras([0,1])
-        #self.init_cameras([0])
+        #self.init_cameras([0, 1])
+        self.init_cameras([0])
         self.init_gui_elements()
         self.target_manager = TargetManager()
+        self.target_manager.define_target(0, 10, 10, 100, 100)
         self.shot_manager = ShotManager()
         self.show_video_feeds()
 
@@ -66,11 +69,8 @@ class LaserShotsApp(tk.Tk):
             self.imageLbls[-1].grid(row=(idx * 10), column=0)
 
     def show_video_frame(self, frame, cam_index):
-        cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
-        img = Image.fromarray(cv2image)
-        resized = img.resize(
-            (self.camera_frm_width, self.camera_frm_height), Image.ANTIALIAS)
-        imgtk = ImageTk.PhotoImage(image=resized)
+        imgtk = ImageProcessor().frame_to_imagetk(
+            frame, self.camera_frm_width, self.camera_frm_height)
 
         self.imageLbls[cam_index].configure(image=imgtk)
         self.imageLbls[cam_index]._image_cache = imgtk
@@ -81,19 +81,22 @@ class LaserShotsApp(tk.Tk):
 
             frame = camera.get_frame()
 
-            shot = LaserDetector(frame).detect(LaserDetector.LASER_RED, 1.0, 3.0)
+            shot = LaserDetector(frame).detect(
+                LaserDetector.LASER_RED, 1.0, 3.0)
 
             if shot:
-                on_target = self.target_manager.shot_is_on_target(camera_idx, shot)
+                on_target = self.target_manager.shot_is_on_target(
+                    camera_idx, shot)
                 if on_target > TargetManager.MISS:
                     self.shot_manager.log_hit(camera_idx, on_target, shot)
                 elif on_target == TargetManager.MISS:
                     self.shot_manager.log_miss(camera_idx, shot)
 
-            if shot:
-                x, y, r = shot
-                print("Shot: cam:" + str(camera_idx) + ", radius:" + str(r) + " at (" + str(x) + "," + str(y) + ")\n")
-                cv2.circle(frame, (int(x), int(y)), 20, (0, 0, 255), 2)
+            ShotVisualizer().draw_shots(frame, self.shot_manager.get_hits_for_camera(
+                camera_idx), self.shot_manager.get_misses_for_camera(camera_idx))
+
+            TargetVisualizer().draw_targets(
+                frame, self.target_manager.get_targets_for_camera(camera_idx))
 
             self.show_video_frame(frame, camera_idx)
 
