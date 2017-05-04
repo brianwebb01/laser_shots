@@ -49,6 +49,10 @@ class TargetManager(object):
         if cam_index in self.targets.keys():
             del self.targets[cam_index][target_index]
 
+    def delete_last_target(self, cam_index):
+        if cam_index in self.targets.keys():
+            self.targets[cam_index].pop(-1)
+
     def delete_all_targets(self):
         self.targets = {}        
 

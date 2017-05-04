@@ -35,8 +35,8 @@ tracking -> ~TargetManager~; ~ShotManager~
 
 vis -> ~ImageProcessor~; ~ShotVisualizer~; ~TargetVisualizer~;
 
-timer -> Timer
+sounds -> ~SoundManager~
 
-sounds -> SoundManager
+timer -> Timer
 
 gui -> ShotTable; TimerLabel				

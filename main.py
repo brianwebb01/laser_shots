@@ -4,6 +4,7 @@
 import cv2
 import Tkinter as tk
 from camera import VideoCamera
+from sounds import SoundManager
 from detection import *
 from viz import *
 from tracking import *
@@ -29,6 +30,7 @@ class LaserShotsApp(tk.Tk):
         self.init_gui_elements()
         self.target_manager = TargetManager(self.cam_resize_multiple)
         self.shot_manager = ShotManager()
+        self.sound_manager = SoundManager()
         self.show_video_feeds()
 
     def init_cameras(self, devices=[0]):
@@ -56,11 +58,11 @@ class LaserShotsApp(tk.Tk):
             self.imageFrames.append(imageFrame)
 
             imageLbl = tk.Label(self.imageFrames[-1])
+            imageLbl._device = camera.get_device()
+            imageLbl._cam_index = self.cameras.index(camera)
+
             self.bind_cam_frame_interactions(imageLbl)
             self.imageLbls.append(imageLbl)
-
-            self.imageLbls[-1]._device = camera.get_device()
-            self.imageLbls[-1]._cam_index = self.cameras.index(camera)
 
             idx = self.cameras.index(camera)
 
@@ -89,8 +91,10 @@ class LaserShotsApp(tk.Tk):
                     camera_idx, shot)
                 if on_target > TargetManager.MISS:
                     self.shot_manager.log_hit(camera_idx, on_target, shot)
+                    self.sound_manager.play_sound(SoundManager.HIT)
                 elif on_target == TargetManager.MISS:
                     self.shot_manager.log_miss(camera_idx, shot)
+                    self.sound_manager.play_sound(SoundManager.MISS)
 
             ShotVisualizer().draw_shots(frame, self.shot_manager.get_hits_for_camera(
                 camera_idx), self.shot_manager.get_misses_for_camera(camera_idx))
