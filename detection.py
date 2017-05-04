@@ -8,13 +8,13 @@ class LaserDetector(object):
     LASER_GREEN = 'GREEN'
     LASER_REDGREEN = 'RED|GREEN'
 
+    RED_LASER_MIN_HSV = colorsys.rgb_to_hsv(255, 207, 187)
+    RED_LASER_MAX_HSV = colorsys.rgb_to_hsv(255, 72, 187)
+
     def __init__(self, frame):
         self.frame = frame
-
         self.debug = False
 
-        self.red_laser_min = colorsys.rgb_to_hsv(255, 207, 187)
-        self.red_laser_max = colorsys.rgb_to_hsv(255, 72, 187)
 
     def detect(self, laser_color=LASER_RED, radius_min=1.5, radius_max=3):
         """Laser shot detection function
@@ -28,11 +28,11 @@ class LaserDetector(object):
         """
 
         if laser_color == self.LASER_RED:
-            laser_min = self.red_laser_min
-            laser_max = self.red_laser_max
+            laser_min = self.RED_LASER_MIN_HSV
+            laser_max = self.RED_LASER_MAX_HSV
         else:
-            laser_min = self.red_laser_min
-            laser_max = self.red_laser_max
+            laser_min = self.RED_LASER_MIN_HSV
+            laser_max = self.RED_LASER_MAX_HSV
 
         hsv_img = cv2.cvtColor(self.frame, cv2.cv.CV_BGR2HSV)
 

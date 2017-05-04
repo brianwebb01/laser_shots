@@ -44,9 +44,7 @@ class LaserShotsApp(tk.Tk):
         self.geometry('{}x{}'.format(
             ((self.camera_res_horiz * self.cam_resize_multiple) + self.sidebar_width),
             (len(self.cameras) * ((self.camera_res_vert *
-             self.cam_resize_multiple) + self.frame_padding))
-        )
-        )
+                                   self.cam_resize_multiple) + self.frame_padding))))
 
         self.imageFrames = []
         self.imageLbls = []
@@ -58,14 +56,7 @@ class LaserShotsApp(tk.Tk):
             self.imageFrames.append(imageFrame)
 
             imageLbl = tk.Label(self.imageFrames[-1])
-            imageLbl.bind(
-                "<Button-1>", lambda event: self.target_manager.on_mouse_event(event))
-            imageLbl.bind(
-                "<ButtonRelease-1>", lambda event: self.target_manager.on_mouse_event(event))
-            imageLbl.bind(
-                "<Button-2>", lambda event: self.target_manager.on_mouse_event(event))
-            imageLbl.bind(
-                "<Motion>", lambda event: self.target_manager.on_mouse_event(event))
+            self.bind_cam_frame_interactions(imageLbl)
             self.imageLbls.append(imageLbl)
 
             self.imageLbls[-1]._device = camera.get_device()
@@ -82,19 +73,19 @@ class LaserShotsApp(tk.Tk):
                     self.cam_resize_multiple), (self.camera_res_vert * self.cam_resize_multiple))
 
         self.imageLbls[cam_index].configure(image=imgtk)
-        self.imageLbls[cam_index]._image_cache=imgtk
+        self.imageLbls[cam_index]._image_cache = imgtk
 
     def show_video_feeds(self):
         for camera in self.cameras:
-            camera_idx=self.cameras.index(camera)
+            camera_idx = self.cameras.index(camera)
 
-            frame=camera.get_frame()
+            frame = camera.get_frame()
 
-            shot=LaserDetector(frame).detect(
+            shot = LaserDetector(frame).detect(
                 LaserDetector.LASER_RED, 1.0, 3.0)
 
             if shot:
-                on_target=self.target_manager.shot_is_on_target(
+                on_target = self.target_manager.shot_is_on_target(
                     camera_idx, shot)
                 if on_target > TargetManager.MISS:
                     self.shot_manager.log_hit(camera_idx, on_target, shot)
@@ -108,14 +99,25 @@ class LaserShotsApp(tk.Tk):
                 frame, self.target_manager.get_targets_for_camera(camera_idx))
 
             if self.target_manager.is_drawing:
-                TargetVisualizer(self.cam_resize_multiple).draw_target(frame, self.target_manager.drawing)
+                TargetVisualizer(self.cam_resize_multiple).draw_target(
+                    frame, self.target_manager.drawing)
 
             self.show_video_frame(frame, camera_idx)
 
         self.after(50, func=lambda: self.show_video_feeds())
 
+    def bind_cam_frame_interactions(self, widget):
+        widget.bind(
+            "<Button-1>", lambda event: self.target_manager.on_mouse_event(event))
+        widget.bind(
+            "<ButtonRelease-1>", lambda event: self.target_manager.on_mouse_event(event))
+        widget.bind(
+            "<Button-2>", lambda event: self.target_manager.on_mouse_event(event))
+        widget.bind(
+            "<Motion>", lambda event: self.target_manager.on_mouse_event(event))
+
 
 if __name__ == "__main__":
-    app=LaserShotsApp(None)
+    app = LaserShotsApp(None)
     app.title('Laser Shots')
     app.mainloop()
