@@ -2,6 +2,7 @@ import cv2
 import colorsys
 from PIL import ImageTk, Image
 
+
 class ImageProcessor(object):
     def frame_to_imagetk(self, frame, width, height):
         cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
@@ -16,16 +17,21 @@ class TargetVisualizer(object):
         self.debug = False
         self.target_outline_stroke = 1
         self.target_outline_color = (0, 255, 0)
+        self.resolution_divisor = 1
 
     def draw_targets(self, frame, targets=[]):
         for tgt in targets:
-            x1, y1, x2, y2 = tgt
-            cv2.rectangle(frame,(x1, y1), (x2, y2),
-                colorsys.rgb_to_hsv(*self.target_outline_color),
-                self.target_outline_stroke)    
+            self.draw_target(frame, tgt)
+
+    def draw_target(self, frame, target):
+        if target:
+            x1, y1, x2, y2 = target
+            cv2.rectangle(frame, (x1 / self.resolution_divisor, y1 / self.resolution_divisor), (x2 / self.resolution_divisor, y2 / self.resolution_divisor),
+                          colorsys.rgb_to_hsv(*self.target_outline_color),
+                          self.target_outline_stroke)
 
             if self.debug:
-                print "Drawing target at ("+str(x1)+","+str(y1)+") ("+str(x2)+","+str(y2)+")"
+                print "Drawing target at (" + str(x1) + "," + str(y1) + ") (" + str(x2) + "," + str(y2) + ")"
 
 
 class ShotVisualizer(object):
@@ -41,11 +47,11 @@ class ShotVisualizer(object):
     def draw_hits(self, frame, hits=[]):
         color = colorsys.rgb_to_hsv(*self.hit_color)
         for _shot in hits:
-            x,y,r,t = _shot
-            cv2.circle(frame, (x,y), self.shot_diameter, color, -1)
+            x, y, r, t = _shot
+            cv2.circle(frame, (x, y), self.shot_diameter, color, -1)
 
     def draw_misses(self, frame, misses=[]):
         color = colorsys.rgb_to_hsv(*self.miss_color)
         for _shot in misses:
-            x,y,r = _shot
-            cv2.circle(frame, (x,y), self.shot_diameter, color, -1)            
+            x, y, r = _shot
+            cv2.circle(frame, (x, y), self.shot_diameter, color, -1)

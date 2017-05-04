@@ -1,3 +1,4 @@
+import cv2
 
 class TargetManager(object):
 
@@ -5,8 +6,36 @@ class TargetManager(object):
     MISS = -2
 
     def __init__(self):
-        self.debug = False
+        self.debug = True
         self.targets = {}
+        self.is_drawing = False
+        self.drawing_start_x = None
+        self.drawing_start_y = None
+
+    def on_mouse_event(self, event):
+        if self.debug:
+            print(event.type)
+
+        if event.type == '4': #'<Button-1>':
+            self.is_drawing = True
+            self.drawing = None
+            self.drawing_start_x = event.x
+            self.drawing_start_y = event.y
+            if self.debug:
+                print('Down', event.x, event.y)
+
+        elif event.type == '5': #'<ButtonRelease-1>':
+            self.is_drawing = False
+            self.drawing = None
+            self.define_target(event.widget._cam_index, self.drawing_start_x, self.drawing_start_y, event.x, event.y)
+            if self.debug:
+                print('Up', event.x, event.y)
+
+        elif event.type == '6': #'<Motion>':
+            if self.is_drawing:
+                self.drawing = [self.drawing_start_x, self.drawing_start_y, event.x, event.y]
+                if self.debug:
+                    print('Move', self.drawing_start_x, self.drawing_start_y, event.x, event.y)
 
     def define_target(self, cam_index, x1, y1, x2, y2):
         new_target = [x1, y1, x2, y2]

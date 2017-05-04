@@ -29,7 +29,6 @@ class LaserShotsApp(tk.Tk):
         self.init_cameras([0])
         self.init_gui_elements()
         self.target_manager = TargetManager()
-        self.target_manager.define_target(0, 10, 10, 100, 100)
         self.shot_manager = ShotManager()
         self.show_video_feeds()
 
@@ -59,9 +58,14 @@ class LaserShotsApp(tk.Tk):
             self.imageFrames.append(imageFrame)
 
             imageLbl = tk.Label(self.imageFrames[-1])
+            imageLbl.bind("<Button-1>", lambda event: self.target_manager.on_mouse_event(event))
+            imageLbl.bind("<ButtonRelease-1>", lambda event: self.target_manager.on_mouse_event(event))
+            imageLbl.bind("<Button-2>", lambda event: self.target_manager.on_mouse_event(event))
+            imageLbl.bind("<Motion>", lambda event: self.target_manager.on_mouse_event(event))
             self.imageLbls.append(imageLbl)
 
             self.imageLbls[-1]._device = camera.get_device()
+            self.imageLbls[-1]._cam_index = self.cameras.index(camera)
 
             idx = self.cameras.index(camera)
 
@@ -97,6 +101,9 @@ class LaserShotsApp(tk.Tk):
 
             TargetVisualizer().draw_targets(
                 frame, self.target_manager.get_targets_for_camera(camera_idx))
+
+            if self.target_manager.is_drawing:
+                TargetVisualizer().draw_target(frame, self.target_manager.drawing)
 
             self.show_video_frame(frame, camera_idx)
 
