@@ -5,8 +5,9 @@ class TargetManager(object):
     NO_TARGETS = -1
     MISS = -2
 
-    def __init__(self):
-        self.debug = True
+    def __init__(self, cam_resize_multiple):
+        self.debug = False
+        self.cam_resize_multiple = cam_resize_multiple
         self.targets = {}
         self.is_drawing = False
         self.drawing_start_x = None
@@ -93,6 +94,11 @@ class TargetManager(object):
 
         for target in self.targets[cam_index]:
             x1, y1, x2, y2 = target
+            x1 = x1 / self.cam_resize_multiple
+            y1 = y1 / self.cam_resize_multiple
+            x2 = x2 / self.cam_resize_multiple
+            y2 = y2 / self.cam_resize_multiple
+
             if (sx >= x1) and (sx <= x2) and (sy >= y1) and (sy <= y2):
                 hit = self.targets[cam_index].index(target)
                 break

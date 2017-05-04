@@ -22,13 +22,12 @@ class LaserShotsApp(tk.Tk):
         self.frame_padding = 10
         self.camera_res_horiz = 320
         self.camera_res_vert = 240
-        self.camera_frm_width = 640
-        self.camera_frm_height = 480
+        self.cam_resize_multiple = 2
 
-        #self.init_cameras([0, 1])
+        # self.init_cameras([0, 1])
         self.init_cameras([0])
         self.init_gui_elements()
-        self.target_manager = TargetManager()
+        self.target_manager = TargetManager(self.cam_resize_multiple)
         self.shot_manager = ShotManager()
         self.show_video_feeds()
 
@@ -43,8 +42,9 @@ class LaserShotsApp(tk.Tk):
             # main window
         self.grid()
         self.geometry('{}x{}'.format(
-            (self.camera_frm_width + self.sidebar_width),
-            (len(self.cameras) * (self.camera_frm_height + self.frame_padding))
+            ((self.camera_res_horiz * self.cam_resize_multiple) + self.sidebar_width),
+            (len(self.cameras) * ((self.camera_res_vert *
+             self.cam_resize_multiple) + self.frame_padding))
         )
         )
 
@@ -58,10 +58,14 @@ class LaserShotsApp(tk.Tk):
             self.imageFrames.append(imageFrame)
 
             imageLbl = tk.Label(self.imageFrames[-1])
-            imageLbl.bind("<Button-1>", lambda event: self.target_manager.on_mouse_event(event))
-            imageLbl.bind("<ButtonRelease-1>", lambda event: self.target_manager.on_mouse_event(event))
-            imageLbl.bind("<Button-2>", lambda event: self.target_manager.on_mouse_event(event))
-            imageLbl.bind("<Motion>", lambda event: self.target_manager.on_mouse_event(event))
+            imageLbl.bind(
+                "<Button-1>", lambda event: self.target_manager.on_mouse_event(event))
+            imageLbl.bind(
+                "<ButtonRelease-1>", lambda event: self.target_manager.on_mouse_event(event))
+            imageLbl.bind(
+                "<Button-2>", lambda event: self.target_manager.on_mouse_event(event))
+            imageLbl.bind(
+                "<Motion>", lambda event: self.target_manager.on_mouse_event(event))
             self.imageLbls.append(imageLbl)
 
             self.imageLbls[-1]._device = camera.get_device()
@@ -74,22 +78,23 @@ class LaserShotsApp(tk.Tk):
 
     def show_video_frame(self, frame, cam_index):
         imgtk = ImageProcessor().frame_to_imagetk(
-            frame, self.camera_frm_width, self.camera_frm_height)
+            frame, (self.camera_res_horiz *
+                    self.cam_resize_multiple), (self.camera_res_vert * self.cam_resize_multiple))
 
         self.imageLbls[cam_index].configure(image=imgtk)
-        self.imageLbls[cam_index]._image_cache = imgtk
+        self.imageLbls[cam_index]._image_cache=imgtk
 
     def show_video_feeds(self):
         for camera in self.cameras:
-            camera_idx = self.cameras.index(camera)
+            camera_idx=self.cameras.index(camera)
 
-            frame = camera.get_frame()
+            frame=camera.get_frame()
 
-            shot = LaserDetector(frame).detect(
+            shot=LaserDetector(frame).detect(
                 LaserDetector.LASER_RED, 1.0, 3.0)
 
             if shot:
-                on_target = self.target_manager.shot_is_on_target(
+                on_target=self.target_manager.shot_is_on_target(
                     camera_idx, shot)
                 if on_target > TargetManager.MISS:
                     self.shot_manager.log_hit(camera_idx, on_target, shot)
@@ -99,11 +104,11 @@ class LaserShotsApp(tk.Tk):
             ShotVisualizer().draw_shots(frame, self.shot_manager.get_hits_for_camera(
                 camera_idx), self.shot_manager.get_misses_for_camera(camera_idx))
 
-            TargetVisualizer().draw_targets(
+            TargetVisualizer(self.cam_resize_multiple).draw_targets(
                 frame, self.target_manager.get_targets_for_camera(camera_idx))
 
             if self.target_manager.is_drawing:
-                TargetVisualizer().draw_target(frame, self.target_manager.drawing)
+                TargetVisualizer(self.cam_resize_multiple).draw_target(frame, self.target_manager.drawing)
 
             self.show_video_frame(frame, camera_idx)
 
@@ -111,6 +116,6 @@ class LaserShotsApp(tk.Tk):
 
 
 if __name__ == "__main__":
-    app = LaserShotsApp(None)
+    app=LaserShotsApp(None)
     app.title('Laser Shots')
     app.mainloop()

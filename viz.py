@@ -13,11 +13,12 @@ class ImageProcessor(object):
 
 
 class TargetVisualizer(object):
-    def __init__(self):
+    def __init__(self, cam_resize_multiple):
         self.debug = False
         self.target_outline_stroke = 1
         self.target_outline_color = (0, 255, 0)
         self.resolution_divisor = 1
+        self.cam_resize_multiple = cam_resize_multiple
 
     def draw_targets(self, frame, targets=[]):
         for tgt in targets:
@@ -26,7 +27,7 @@ class TargetVisualizer(object):
     def draw_target(self, frame, target):
         if target:
             x1, y1, x2, y2 = target
-            cv2.rectangle(frame, (x1 / self.resolution_divisor, y1 / self.resolution_divisor), (x2 / self.resolution_divisor, y2 / self.resolution_divisor),
+            cv2.rectangle(frame, (x1 / self.cam_resize_multiple, y1 / self.cam_resize_multiple), (x2 / self.cam_resize_multiple, y2 / self.cam_resize_multiple),
                           colorsys.rgb_to_hsv(*self.target_outline_color),
                           self.target_outline_stroke)
 
