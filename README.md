@@ -37,6 +37,6 @@ vis -> ~ImageProcessor~; ~ShotVisualizer~; ~TargetVisualizer~;
 
 sounds -> ~SoundManager~
 
-timer -> Timer
+timer -> ~Timer~
 
 gui -> ShotTable; TimerLabel				
