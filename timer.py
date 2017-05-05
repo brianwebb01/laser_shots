@@ -3,12 +3,15 @@ import time
 
 class Timer(object):
 
-    def __init__(self):
+    def __init__(self, start_callable, par_callable):
         self.debug = False
+        self.start_callable_called = False
+        self.start_callable = start_callable
+        self.par_callable_called = False
+        self.par_callable = par_callable
         self.startTime = 0.0
         self.elapsedTime = 0.0
-        self.delayTime = 0.0
-        self.parTime = 0.0
+        self.delayTime = False
         self.parTime = False 
         self.parTimeMet = False
         self.mainTimerPattern = '%02i:%02i:%02i'
@@ -23,7 +26,7 @@ class Timer(object):
         if delay > 0:
             self.elapsedTime = delay * -1
         else:
-            self.elapsedTime = 0.0
+            self.elapsedTime = 0
 
         par = abs(float(self.parTime))
         if par > 0:
@@ -49,8 +52,13 @@ class Timer(object):
 
     def time_update(self):
         self.elapsedTime = self.get_current_time()
-        if(self.parTime):
-            if(self.elapsedTime >= self.parTime):
+
+        if self.delayTime:
+            if self.elapsedTime >= 0:
+                self.time_delay_time_expired()
+
+        if self.parTime:
+            if self.elapsedTime >= self.parTime:
                 self.time_par_time_met()
         return self.time_format_elap(self.elapsedTime)
 
@@ -79,16 +87,41 @@ class Timer(object):
         if self.debug:
             print "timer.reset"
 
+        self.par_callable_called = False
+        self.start_callable_called = False
         self.startTime = self.current_time()
         self.time_init()
 
     def time_par_time_met(self):
+        if not self.timerRunning:
+            return
+
         if self.debug:
             print "timer.time_par_time_met"
 
         if (self.timerRunning):
             self.parTimeMet = True;
             self.stop()
+
+        if self.par_callable_called:
+            return 
+
+        self.par_callable_called = True
+        self.par_callable()    
+
+
+    def time_delay_time_expired(self):
+        if not self.timerRunning:
+            return
+
+        if self.debug:
+            print "timer.time_delay_time_expired: " + str(self.start_callable_called)
+
+        if self.start_callable_called:
+            return 
+
+        self.start_callable_called = True
+        self.start_callable()
 
     def get_current_time_formatted_elap(self):
         timeStr = self.time_format_elap(self.elapsedTime)

@@ -31,7 +31,9 @@ class LaserShotsApp(tk.Tk):
         self.target_manager = TargetManager(self.cam_resize_multiple)
         self.shot_manager = ShotManager()
         self.sound_manager = SoundManager()
-        self.timer = Timer()
+        self.timer = Timer(self.evt_timer_started, self.evt_timer_par)
+        self.timer.parTime = 10.5
+        self.timer.delayTime = 3.5
         self.init_gui_elements()
         self.show_video_feeds()
 
@@ -126,6 +128,12 @@ class LaserShotsApp(tk.Tk):
             "<Button-2>", lambda event: self.target_manager.on_mouse_event(event))
         widget.bind(
             "<Motion>", lambda event: self.target_manager.on_mouse_event(event))
+
+    def evt_timer_started(self):
+        print "\n\n[ TIMER STARTED ]\n\n"
+
+    def evt_timer_par(self):
+        print "\n\n[ PAR MET ]\n\n"
 
 
 if __name__ == "__main__":
