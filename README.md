@@ -16,27 +16,9 @@ The color of the targets and background they are presented on shouldn't have spe
 
 ### Features
 
-* timer start, stop, reset, delayBtwn, par
-* timer wx: main label
+* timer delayBtwn, par
+* delete target
 * settings wx: stop, start, reset, delayBtwn, par (sensitivities?, color ranges?)
-* shot table wx
-* sounds: start, shot, miss, par
-* setting: amera frame rate sensitivity to pickup shots
+* setting: camera frame rate sensitivity to pickup shots
 * setting: color range sensitivity by camera
 * setting: light sensitivity by camera?
-
-### New File Structure
-
-camera -> ~VideoCamera~
-
-detection -> ~LaserDetector~
-
-tracking -> ~TargetManager~; ~ShotManager~
-
-vis -> ~ImageProcessor~; ~ShotVisualizer~; ~TargetVisualizer~;
-
-sounds -> ~SoundManager~
-
-timer -> ~Timer~
-
-gui -> ShotTable; TimerLabel				
