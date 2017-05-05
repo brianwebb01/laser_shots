@@ -12,6 +12,7 @@ class TargetManager(object):
         self.is_drawing = False
         self.drawing_start_x = None
         self.drawing_start_y = None
+        self.last_target_def_cam_index = False
 
     def on_mouse_event(self, event):
         if self.debug:
@@ -39,7 +40,9 @@ class TargetManager(object):
                     print('Move', self.drawing_start_x, self.drawing_start_y, event.x, event.y)
 
     def define_target(self, cam_index, x1, y1, x2, y2):
+        print 'define_target cam_index: '+str(cam_index)
         new_target = [x1, y1, x2, y2]
+        self.last_target_def_cam_index = cam_index
         if cam_index in self.targets.keys():
             self.targets[cam_index].append(new_target)
         else:
@@ -49,7 +52,11 @@ class TargetManager(object):
         if cam_index in self.targets.keys():
             del self.targets[cam_index][target_index]
 
-    def delete_last_target(self, cam_index):
+    def delete_last_target(self, cam_index=False):
+        if cam_index != False:
+            cam_index = self.last_target_def_cam_index
+        if cam_index != False:
+            return
         if cam_index in self.targets.keys():
             self.targets[cam_index].pop(-1)
 

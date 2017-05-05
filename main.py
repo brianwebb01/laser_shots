@@ -27,8 +27,8 @@ class LaserShotsApp(tk.Tk):
         self.camera_res_vert = 240
         self.cam_resize_multiple = 2
 
-        #self.init_cameras([0, 1])
-        self.init_cameras([0])
+        self.init_cameras([0, 1])
+        #self.init_cameras([0])
         self.target_manager = TargetManager(self.cam_resize_multiple)
         self.sound_manager = SoundManager()
         self.timer = Timer(self.evt_timer_started, self.evt_timer_par)
@@ -61,6 +61,8 @@ class LaserShotsApp(tk.Tk):
             x=712, y=457)
         tk.Button(self, text="Reset", command=self.reset).place(
             x=777, y=457)
+        tk.Button(self, text="Delete Target", command=self.target_manager.delete_last_target).place(
+            x=842, y=457)
 
         # shot table
         self.shotData = ttk.Treeview(self, selectmode="extended", height=17,
