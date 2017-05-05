@@ -49,6 +49,9 @@ class Timer(object):
 
     def time_update(self):
         self.elapsedTime = self.get_current_time()
+        if(self.parTime):
+            if(self.elapsedTime >= self.parTime):
+                self.time_par_time_met()
         return self.time_format_elap(self.elapsedTime)
 
     def start(self):
@@ -88,10 +91,6 @@ class Timer(object):
             self.stop()
 
     def get_current_time_formatted_elap(self):
-        if(self.parTime):
-            if(self.elapsedTime >= self.parTime):
-                self.time_par_time_met()
-
         timeStr = self.time_format_elap(self.elapsedTime)
         return timeStr
 

@@ -26,8 +26,8 @@ class LaserShotsApp(tk.Tk):
         self.camera_res_vert = 240
         self.cam_resize_multiple = 2
 
-        self.init_cameras([0, 1])
-        #self.init_cameras([0])
+        #self.init_cameras([0, 1])
+        self.init_cameras([0])
         self.target_manager = TargetManager(self.cam_resize_multiple)
         self.shot_manager = ShotManager()
         self.sound_manager = SoundManager()
@@ -48,12 +48,9 @@ class LaserShotsApp(tk.Tk):
             (len(self.cameras) * ((self.camera_res_vert *
                                    self.cam_resize_multiple) + self.frame_padding))))
 
-        self.button_start = tk.Button(self, text="Start", command=self.timer.start)
-        self.button_start.place(x=647, y=457)
-        self.button_stop = tk.Button(self, text="Stop", command=self.timer.stop)
-        self.button_stop.place(x=712, y=457)
-        self.button_reset = tk.Button(self, text="Reset", command=self.timer.reset)
-        self.button_reset.place(x=777, y=457)
+        self.button_start = tk.Button(self, text="Start", command=self.timer.start).place(x=647, y=457)
+        self.button_stop = tk.Button(self, text="Stop", command=self.timer.stop).place(x=712, y=457)
+        self.button_reset = tk.Button(self, text="Reset", command=self.timer.reset).place(x=777, y=457)
 
         self.imageFrames = []
         self.imageLbls = []
