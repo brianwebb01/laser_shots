@@ -50,9 +50,11 @@ class LaserShotsApp(tk.Tk):
             (len(self.cameras) * ((self.camera_res_vert *
                                    self.cam_resize_multiple) + self.frame_padding))))
 
-        self.button_start = tk.Button(self, text="Start", command=self.timer.start).place(x=647, y=457)
-        self.button_stop = tk.Button(self, text="Stop", command=self.timer.stop).place(x=712, y=457)
-        self.button_reset = tk.Button(self, text="Reset", command=self.timer.reset).place(x=777, y=457)
+        self.label_timer = tk.Label(self, text="00:00.00", font=("Helvetica", 48))
+        self.label_timer.place(x=700, y=0)
+        tk.Button(self, text="Start", command=self.timer.start).place(x=647, y=457)
+        tk.Button(self, text="Stop", command=self.timer.stop).place(x=712, y=457)
+        tk.Button(self, text="Reset", command=self.timer.reset).place(x=777, y=457)
 
         self.imageFrames = []
         self.imageLbls = []
@@ -114,8 +116,7 @@ class LaserShotsApp(tk.Tk):
 
             self.show_video_frame(frame, camera_idx)
 
-        t = self.timer.time_update()
-        print str(t)
+        self.label_timer.configure(text=self.timer.time_update())
 
         self.after(50, func=lambda: self.show_video_feeds())
 
