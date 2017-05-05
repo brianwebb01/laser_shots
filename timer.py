@@ -34,7 +34,7 @@ class Timer(object):
         else:
             self.parTime = False
 
-    def current_time(self):
+    def _current_time(self):
         return time.time()
 
     def time_format_shot_log(self, elap):
@@ -68,7 +68,7 @@ class Timer(object):
 
         if not self.timerRunning:
             self.time_init()
-            self.startTime = self.current_time() - self.elapsedTime
+            self.startTime = self._current_time() - self.elapsedTime
             self.timerRunning = True
             self.time_update()
 
@@ -81,7 +81,7 @@ class Timer(object):
             if self.parTimeMet:
                 self.elapsedTime = self.parTime
             else:    
-                self.elapsedTime = self.current_time() - self.startTime
+                self.elapsedTime = self._current_time() - self.startTime
 
     def reset(self):
         if self.debug:
@@ -89,7 +89,7 @@ class Timer(object):
 
         self.par_callable_called = False
         self.start_callable_called = False
-        self.startTime = self.current_time()
+        self.startTime = self._current_time()
         self.time_init()
 
     def time_par_time_met(self):
@@ -129,7 +129,7 @@ class Timer(object):
 
     def get_current_time(self):
         if (self.timerRunning):
-            t = self.current_time() - self.startTime
+            t = self._current_time() - self.startTime
         else:
             t = self.elapsedTime
 

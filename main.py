@@ -3,6 +3,7 @@
 
 import cv2
 import Tkinter as tk
+import ttk
 from camera import VideoCamera
 from sounds import SoundManager
 from detection import *
@@ -29,9 +30,9 @@ class LaserShotsApp(tk.Tk):
         #self.init_cameras([0, 1])
         self.init_cameras([0])
         self.target_manager = TargetManager(self.cam_resize_multiple)
-        self.shot_manager = ShotManager()
         self.sound_manager = SoundManager()
         self.timer = Timer(self.evt_timer_started, self.evt_timer_par)
+        self.shot_manager = ShotManager(self.timer)
         self.timer.parTime = 10.5
         self.timer.delayTime = 3.5
         self.init_gui_elements()
@@ -44,17 +45,47 @@ class LaserShotsApp(tk.Tk):
                 d, self.camera_res_horiz, self.camera_res_vert))
 
     def init_gui_elements(self):
+        # main window
         self.grid()
         self.geometry('{}x{}'.format(
             ((self.camera_res_horiz * self.cam_resize_multiple) + self.sidebar_width),
             (len(self.cameras) * ((self.camera_res_vert *
                                    self.cam_resize_multiple) + self.frame_padding))))
-
-        self.label_timer = tk.Label(self, text="00:00.00", font=("Helvetica", 48))
+        # timer label
+        self.label_timer = tk.Label(
+            self, text="00:00.00", font=("Helvetica", 48))
         self.label_timer.place(x=700, y=0)
-        tk.Button(self, text="Start", command=self.timer.start).place(x=647, y=457)
-        tk.Button(self, text="Stop", command=self.timer.stop).place(x=712, y=457)
-        tk.Button(self, text="Reset", command=self.timer.reset).place(x=777, y=457)
+
+        # buttons
+        tk.Button(self, text="Start", command=self.timer.start).place(
+            x=647, y=457)
+        tk.Button(self, text="Stop", command=self.timer.stop).place(
+            x=712, y=457)
+        tk.Button(self, text="Reset", command=self.reset).place(
+            x=777, y=457)
+
+        # shot table
+        self.shotData = ttk.Treeview(self, selectmode="extended", height=17,
+                                     columns=('Shot #', 'Shot Time', 'Split', 'Target #'))
+        self.shotData.heading('#0', text="Shot #")
+        self.shotData.heading('#1', text="Shot Time")
+        self.shotData.heading('#2', text="Split")
+        self.shotData.heading('#3', text="Target #")
+        self.shotData.column('#1', minwidth=0, width=75,
+                             stretch=0, anchor=tk.CENTER)
+        self.shotData.column('#2', minwidth=0, width=75,
+                             stretch=0, anchor=tk.CENTER)
+        self.shotData.column('#3', minwidth=0, width=150,
+                             stretch=0, anchor=tk.CENTER)
+        self.shotData.column('#0', minwidth=0, width=50,
+                             stretch=0, anchor=tk.CENTER)
+        # kill the empty last column
+        self.shotData.column('#4', minwidth=0, width=0)
+        self.shotData.tag_configure(
+            'error', background='red', foreground='white')
+        self.shotData.tag_configure(
+            'miss', background='black', foreground='white')
+        self.shotData.place(x=650, y=60)
 
         self.imageFrames = []
         self.imageLbls = []
@@ -91,18 +122,19 @@ class LaserShotsApp(tk.Tk):
 
             frame = camera.get_frame()
 
-            shot = LaserDetector(frame).detect(
-                LaserDetector.LASER_RED, 1.0, 3.0)
+            if self.timer.timerRunning and self.timer.elapsedTime > 0:
+                shot = LaserDetector(frame).detect(
+                    LaserDetector.LASER_RED, 1.0, 3.0)
 
-            if shot:
-                on_target = self.target_manager.shot_is_on_target(
-                    camera_idx, shot)
-                if on_target > TargetManager.MISS:
-                    self.shot_manager.log_hit(camera_idx, on_target, shot)
-                    self.sound_manager.play_sound(SoundManager.HIT)
-                elif on_target == TargetManager.MISS:
-                    self.shot_manager.log_miss(camera_idx, shot)
-                    self.sound_manager.play_sound(SoundManager.MISS)
+                if shot:
+                    on_target = self.target_manager.shot_is_on_target(
+                        camera_idx, shot)
+                    if on_target > TargetManager.MISS:
+                        self.log_shot_details(self.shot_manager.log_hit(camera_idx, on_target, shot))
+                        self.sound_manager.play_sound(SoundManager.HIT)
+                    elif on_target == TargetManager.MISS:
+                        self.log_shot_details(self.shot_manager.log_miss(camera_idx, shot))
+                        self.sound_manager.play_sound(SoundManager.MISS)
 
             ShotVisualizer().draw_shots(frame, self.shot_manager.get_hits_for_camera(
                 camera_idx), self.shot_manager.get_misses_for_camera(camera_idx))
@@ -130,6 +162,20 @@ class LaserShotsApp(tk.Tk):
         widget.bind(
             "<Motion>", lambda event: self.target_manager.on_mouse_event(event))
 
+    def log_shot_details(self, data):
+
+        shot_num, shot_time_str, split_time, target_num, tags = data
+
+        self.shotData.insert('', 'end',
+                             text=shot_num,
+                             values=(shot_time_str, split_time, target_num),
+                             tags=tags)
+    
+    def reset(self):
+        self.timer.reset()
+        self.shot_manager.reset()
+        self.shotData.delete(*self.shotData.get_children())
+
     def evt_timer_started(self):
         if self.debug:
             print "\n\n[ TIMER STARTED ]\n\n"
@@ -138,7 +184,7 @@ class LaserShotsApp(tk.Tk):
     def evt_timer_par(self):
         if self.debug:
             print "\n\n[ PAR MET ]\n\n"
-        self.sound_manager.play_sound(SoundManager.PAR)    
+        self.sound_manager.play_sound(SoundManager.PAR)
 
 
 if __name__ == "__main__":

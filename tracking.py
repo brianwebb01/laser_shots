@@ -112,15 +112,28 @@ class TargetManager(object):
 
 class ShotManager(object):
 
-    def __init__(self, shot_table=None):
-        """
-            Args:
-                shot_table (gui.ShotTable)
-        """
+    HIT = 'hit'
+    MISS = 'miss'
+
+    def __init__(self, timer):
         self.debug = True
-        self.shot_table = shot_table
+        self.timer = timer
         self.hits = {}
         self.misses = {}
+        self.shotTimes = []
+
+    def reset(self):
+        self.hits = {}
+        self.misses = {}
+        self.shotTimes = []
+
+    def shot_count(self):
+        total = 0
+        for cam_index in self.hits:
+            total += len(self.hits[cam_index])
+        for cam_index in self.misses:
+            total += len(self.misses[cam_index])
+        return total
 
     def log_hit(self, cam_index, target_index, shot):
         x,y,r = shot
@@ -135,6 +148,8 @@ class ShotManager(object):
             x,y,r = shot
             print "Logged HIT for cam("+str(cam_index)+"), target("+str(target_index)+") at ("+str(x)+","+str(y)+")"
 
+        return self.log_shot_details(self.HIT, cam_index, target_index)
+
     def log_miss(self, cam_index, shot):
         if cam_index in self.misses.keys():
             self.misses[cam_index].append(shot)
@@ -144,6 +159,38 @@ class ShotManager(object):
         if self.debug:
             x,y,r = shot
             print "Logged MISS for cam("+str(cam_index)+") at ("+str(x)+","+str(y)+")"
+
+        return self.log_shot_details(self.MISS, cam_index)
+
+    def log_shot_details(self, hit_miss, cam_index, target_index=False):
+        if hit_miss == self.HIT:
+            tags = ()
+        elif hit_miss == self.MISS:
+            tags = ('miss')
+
+        shot_num = self.shot_count()
+
+        shot_time = self.timer.get_current_time()
+        self.shotTimes.append(shot_time)
+        shot_time_str = self.timer.time_format_shot_log(shot_time)
+        
+        if len(self.shotTimes) >= 2:
+            last_time = self.shotTimes[-2]
+            split_time = self.timer.time_format_shot_log((shot_time - last_time))
+        else:
+            split_time = self.timer.time_format_shot_log(0.0)
+        
+        if target_index == TargetManager.MISS:
+            target_num = 'Miss'
+        elif target_index == TargetManager.NO_TARGETS:
+            target_num = 'N/A'
+        else:
+            target_num = "Target "+str(target_index + 1)
+
+        target_num = "Cam "+str(cam_index)+", "+ target_num
+
+        return (shot_num, shot_time_str, split_time, target_num, tags)
+
     
     def get_hits_for_camera(self, cam_index):
         """Get an array of hits for the given camera
