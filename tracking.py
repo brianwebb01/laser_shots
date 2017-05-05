@@ -40,7 +40,6 @@ class TargetManager(object):
                     print('Move', self.drawing_start_x, self.drawing_start_y, event.x, event.y)
 
     def define_target(self, cam_index, x1, y1, x2, y2):
-        print 'define_target cam_index: '+str(cam_index)
         new_target = [x1, y1, x2, y2]
         self.last_target_def_cam_index = cam_index
         if cam_index in self.targets.keys():
@@ -53,12 +52,14 @@ class TargetManager(object):
             del self.targets[cam_index][target_index]
 
     def delete_last_target(self, cam_index=False):
-        if cam_index != False:
+        if cam_index is False:
             cam_index = self.last_target_def_cam_index
-        if cam_index != False:
+        if cam_index is False:
             return
         if cam_index in self.targets.keys():
-            self.targets[cam_index].pop(-1)
+            print str(cam_index) + ' cam index found'
+            if self.targets[cam_index]:
+                self.targets[cam_index].pop(-1)
 
     def delete_all_targets(self):
         self.targets = {}        

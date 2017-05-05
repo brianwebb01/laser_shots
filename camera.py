@@ -1,7 +1,12 @@
 import cv2
 
+
 class VideoCamera(object):
-    def __init__(self, device=0, cam_width=320, cam_height=240):
+    def __init__(self):
+        self.debug = False
+        self.capture = None
+
+    def new(self, device=0, cam_width=320, cam_height=240):
 
         self.device = device
 
@@ -19,10 +24,13 @@ class VideoCamera(object):
 
         self.capture.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, cam_width)
         self.capture.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, cam_height)
-    
+
+        return self
+
 
     def __del__(self):
-        self.capture.release()
+        if self.capture:
+            self.capture.release()
 
     def get_device(self):
         return self.device

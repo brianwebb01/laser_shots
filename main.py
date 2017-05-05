@@ -26,9 +26,10 @@ class LaserShotsApp(tk.Tk):
         self.camera_res_horiz = 320
         self.camera_res_vert = 240
         self.cam_resize_multiple = 2
+        self.camera_devices = {'FaceTime HD Camera':0, 'USB Camera 1': 1}
+        self.camera_devices = {'FaceTime HD Camera':0}
 
-        self.init_cameras([0, 1])
-        #self.init_cameras([0])
+        self.init_cameras(self.camera_devices.values())
         self.target_manager = TargetManager(self.cam_resize_multiple)
         self.sound_manager = SoundManager()
         self.timer = Timer(self.evt_timer_started, self.evt_timer_par)
@@ -39,8 +40,7 @@ class LaserShotsApp(tk.Tk):
     def init_cameras(self, devices=[0]):
         self.cameras = []
         for d in devices:
-            self.cameras.append(VideoCamera(
-                d, self.camera_res_horiz, self.camera_res_vert))
+            self.cameras.append(VideoCamera().new(d, self.camera_res_horiz, self.camera_res_vert))
 
     def init_gui_elements(self):
         # main window
@@ -61,8 +61,11 @@ class LaserShotsApp(tk.Tk):
             x=712, y=457)
         tk.Button(self, text="Reset", command=self.reset).place(
             x=777, y=457)
-        tk.Button(self, text="Delete Target", command=self.target_manager.delete_last_target).place(
-            x=842, y=457)
+        tk.Button(self, text="Delete Target", command=self.delete_target).place(
+            x=845, y=457)
+        self.cam_sel_var = tk.StringVar(self)
+        self.cam_sel_var.set(self.camera_devices.keys()[0])
+        tk.OptionMenu(self, self.cam_sel_var, *self.camera_devices.keys()).place(x=775, y=425)
 
         # shot table
         self.shotData = ttk.Treeview(self, selectmode="extended", height=17,
@@ -199,6 +202,11 @@ class LaserShotsApp(tk.Tk):
         self.timer.reset()
         self.shot_manager.reset()
         self.shotData.delete(*self.shotData.get_children())
+
+    def delete_target(self):
+        cam_name = self.cam_sel_var.get()
+        cam_index = self.camera_devices[cam_name]
+        self.target_manager.delete_last_target(cam_index)
 
     def evt_timer_started(self):
         if self.debug:
