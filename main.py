@@ -130,10 +130,14 @@ class LaserShotsApp(tk.Tk):
             "<Motion>", lambda event: self.target_manager.on_mouse_event(event))
 
     def evt_timer_started(self):
-        print "\n\n[ TIMER STARTED ]\n\n"
+        if self.debug:
+            print "\n\n[ TIMER STARTED ]\n\n"
+        self.sound_manager.play_sound(SoundManager.START)
 
     def evt_timer_par(self):
-        print "\n\n[ PAR MET ]\n\n"
+        if self.debug:
+            print "\n\n[ PAR MET ]\n\n"
+        self.sound_manager.play_sound(SoundManager.PAR)    
 
 
 if __name__ == "__main__":
