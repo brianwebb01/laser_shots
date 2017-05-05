@@ -116,7 +116,7 @@ class ShotManager(object):
     MISS = 'miss'
 
     def __init__(self, timer):
-        self.debug = True
+        self.debug = False
         self.timer = timer
         self.hits = {}
         self.misses = {}

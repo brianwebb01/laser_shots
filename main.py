@@ -20,7 +20,7 @@ class LaserShotsApp(tk.Tk):
         self.initialize()
 
     def initialize(self):
-        self.debug = True
+        self.debug = False
         self.sidebar_width = 375
         self.frame_padding = 10
         self.camera_res_horiz = 320
@@ -33,8 +33,6 @@ class LaserShotsApp(tk.Tk):
         self.sound_manager = SoundManager()
         self.timer = Timer(self.evt_timer_started, self.evt_timer_par)
         self.shot_manager = ShotManager(self.timer)
-        self.timer.parTime = 10.5
-        self.timer.delayTime = 3.5
         self.init_gui_elements()
         self.show_video_feeds()
 
@@ -57,7 +55,7 @@ class LaserShotsApp(tk.Tk):
         self.label_timer.place(x=700, y=0)
 
         # buttons
-        tk.Button(self, text="Start", command=self.timer.start).place(
+        tk.Button(self, text="Start", command=self.start).place(
             x=647, y=457)
         tk.Button(self, text="Stop", command=self.timer.stop).place(
             x=712, y=457)
@@ -87,6 +85,17 @@ class LaserShotsApp(tk.Tk):
             'miss', background='black', foreground='white')
         self.shotData.place(x=650, y=60)
 
+        # settings ui stuff
+        tk.Label(self, text='Delay').place(x=647, y=398)
+        tk.Label(self, text='Par').place(x=647, y=425)
+        self.entry_delay = tk.Entry(self, width=5)
+        self.entry_delay.insert(0, '0')
+        self.entry_par = tk.Entry(self, width=5)
+        self.entry_par.insert(0, '0')
+        self.entry_delay.place(x=700, y=398)
+        self.entry_par.place(x=700, y=425)
+
+        # camera image stuff
         self.imageFrames = []
         self.imageLbls = []
 
@@ -171,7 +180,20 @@ class LaserShotsApp(tk.Tk):
                              values=(shot_time_str, split_time, target_num),
                              tags=tags)
     
+    def start(self):
+        if self.debug:
+            print "main.start"
+        d = abs(float(self.entry_delay.get()))
+        p = abs(float(self.entry_par.get()))
+        if d > 0:
+            self.timer.delayTime = d
+        if p > 0:
+            self.timer.parTime = p
+        self.timer.start()
+
     def reset(self):
+        if self.debug:
+            print "main.reset"
         self.timer.reset()
         self.shot_manager.reset()
         self.shotData.delete(*self.shotData.get_children())
