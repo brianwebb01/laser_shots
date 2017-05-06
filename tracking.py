@@ -10,6 +10,7 @@ class TargetManager(object):
         self.cam_resize_multiple = cam_resize_multiple
         self.targets = {}
         self.is_drawing = False
+        self.drawing_on_cam = False
         self.drawing_start_x = None
         self.drawing_start_y = None
         self.last_target_def_cam_index = False
@@ -29,12 +30,14 @@ class TargetManager(object):
         elif event.type == '5': #'<ButtonRelease-1>':
             self.is_drawing = False
             self.drawing = None
+            self.drawing_on_cam = None
             self.define_target(event.widget._cam_index, self.drawing_start_x, self.drawing_start_y, event.x, event.y)
             if self.debug:
                 print('Up', event.x, event.y)
 
         elif event.type == '6': #'<Motion>':
             if self.is_drawing:
+                self.drawing_on_cam = event.widget._cam_index
                 self.drawing = [self.drawing_start_x, self.drawing_start_y, event.x, event.y]
                 if self.debug:
                     print('Move', self.drawing_start_x, self.drawing_start_y, event.x, event.y)

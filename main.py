@@ -157,8 +157,9 @@ class LaserShotsApp(tk.Tk):
                 frame, self.target_manager.get_targets_for_camera(camera_idx))
 
             if self.target_manager.is_drawing:
-                TargetVisualizer(self.cam_resize_multiple).draw_target(
-                    frame, self.target_manager.drawing)
+                if self.target_manager.drawing_on_cam == camera_idx:
+                    TargetVisualizer(self.cam_resize_multiple).draw_target(
+                        frame, self.target_manager.drawing)
 
             self.show_video_frame(frame, camera_idx)
 
