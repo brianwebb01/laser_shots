@@ -16,9 +16,9 @@ The color of the targets and background they are presented on shouldn't have spe
 
 ### Features
 
-* timer delayBtwn, par
-* delete target
-* settings wx: stop, start, reset, delayBtwn, par (sensitivities?, color ranges?)
-* setting: camera frame rate sensitivity to pickup shots
-* setting: color range sensitivity by camera
-* setting: light sensitivity by camera?
+* multi-processing of cam / shot detection
+* random delay
+* multi purpose start / stop target
+* ? setting: camera frame rate sensitivity to pickup shots
+* ? setting: color range sensitivity by camera
+* ? setting: light sensitivity by camera?
