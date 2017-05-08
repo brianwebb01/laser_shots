@@ -22,8 +22,8 @@ class VideoCamera(object):
         # as the main.py.
         # self.capture = cv2.VideoCapture('video.mp4')
 
-        self.capture.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, cam_width)
-        self.capture.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, cam_height)
+        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, cam_width)
+        self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, cam_height)
 
         return self
 

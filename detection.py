@@ -34,7 +34,7 @@ class LaserDetector(object):
             laser_min = self.RED_LASER_MIN_HSV
             laser_max = self.RED_LASER_MAX_HSV
 
-        hsv_img = cv2.cvtColor(self.frame, cv2.cv.CV_BGR2HSV)
+        hsv_img = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
 
         frame_threshed = cv2.inRange(hsv_img, laser_min, laser_max)
 
