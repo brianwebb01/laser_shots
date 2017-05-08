@@ -1,67 +1,80 @@
 import cv2
 import colorsys
+import numpy as np
 
 
 class LaserDetector(object):
 
-    LASER_RED = 'RED'
-    LASER_GREEN = 'GREEN'
-    LASER_REDGREEN = 'RED|GREEN'
-
-    RED_LASER_MIN_HSV = colorsys.rgb_to_hsv(255, 207, 187)
-    RED_LASER_MAX_HSV = colorsys.rgb_to_hsv(255, 72, 187)
+    RED_HSV_MIN_1 = (0, 0, 200)
+    RED_HSV_MAX_1 = (20, 100, 255)
+    RED_HSV_MIN_2 = (160, 0, 200)
+    RED_HSV_MAX_2 = (179, 100, 255)
+    GREEN_HSV_MIN = (40, 0, 200)
+    GREEN_HSV_MAX = (80, 100, 255)
 
     def __init__(self, frame):
+        self.debug = True
         self.frame = frame
-        self.debug = False
 
-
-    def detect(self, laser_color=LASER_RED, radius_min=1.5, radius_max=3):
+    def detect(self, radius_min=1.0, radius_max=15):
         """Laser shot detection function
-
-        Args:
-            laser_color (str): RED, GREEN, RED|GREEN
 
         Returns:
             tuple | False: False if nothing detected, if detected tuple of (x,y, radius) location
 
         """
 
-        if laser_color == self.LASER_RED:
-            laser_min = self.RED_LASER_MIN_HSV
-            laser_max = self.RED_LASER_MAX_HSV
-        else:
-            laser_min = self.RED_LASER_MIN_HSV
-            laser_max = self.RED_LASER_MAX_HSV
+        bilateral_filtered_image = cv2.bilateralFilter(self.frame, 5, 175, 175)
+        # cv2.imshow('Bilateral', bilateral_filtered_image)
 
-        hsv_img = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
+        edge_detected_image = cv2.Canny(bilateral_filtered_image, 170, 250)
+        # cv2.imshow('Edge', edge_detected_image)
 
-        frame_threshed = cv2.inRange(hsv_img, laser_min, laser_max)
-
-        contours = cv2.findContours(
-            frame_threshed.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+        _, contours, hierarchy = cv2.findContours(
+            edge_detected_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
         center = None
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            equi_diameter = np.sqrt(4 * area / np.pi)
+            radius = round(equi_diameter / 2, 2)
 
-        if len(contours) > 0:
-            c = max(contours, key=cv2.contourArea)
-            ((x, y), radius) = cv2.minEnclosingCircle(c)
-            M = cv2.moments(c)
-
+            M = cv2.moments(contour)
             if M["m00"] > 0:
                 center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
             else:
-                center = int(x), int(y)
+                continue
 
-            _x, _y = center
+            if radius_min < radius < radius_max and center[0] in range(0, self.frame.shape[0]) and center[1] in range(0, self.frame.shape[1]):
+                # compute the center of the contour
+                pixel_value = self.frame[center[0], center[1]]
+                hsv_value = colorsys.rgb_to_hsv(
+                    pixel_value[0], pixel_value[1], pixel_value[2])
 
-            if self.debug:
-                print("Shot Radius: " + str(radius) + " at (" + str(_x) + "," + str(_y) + ")\n")
+                laser_type = None
 
-            # IF the radius renders as a legit detection of the laser
-            if radius >= radius_min and radius <= radius_max:
-                ret = (_x, _y, radius)
+                for c in range(0, 3):
+                    if not self.RED_HSV_MIN_1[c] < hsv_value[c] < self.RED_HSV_MAX_1[c]:
+                        break
+                    laser_type = 'red1'
+                for c in range(0, 3):
+                    if not self.RED_HSV_MIN_2[c] < hsv_value[c] < self.RED_HSV_MAX_2[c]:
+                        break
+                    laser_type = 'red2'
+                for c in range(0, 3):
+                    if not self.GREEN_HSV_MIN[c] < hsv_value[c] < self.GREEN_HSV_MAX[c]:
+                        break
+                    laser_type = 'green'
+
+                if laser_type is None:
+                    continue
+                if self.debug:
+                    print(laser_type + " Shot! Radius: " + str(radius) + ", coords: " + "(" + str(center[0]) + "," +
+                                     str(center[1]) + ")" + "\n")
+
+                x, y = center
+                ret = (x, y, radius)
             else:
                 ret = False
 
-            return ret
+        return ret

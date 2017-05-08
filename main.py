@@ -137,8 +137,7 @@ class LaserShotsApp(tk.Tk):
             frame = camera.get_frame()
 
             if self.timer.timerRunning and self.timer.elapsedTime > 0:
-                shot = LaserDetector(frame).detect(
-                    LaserDetector.LASER_RED, 1.0, 3.0)
+                shot = LaserDetector(frame).detect(1.0, 15.0)
 
                 if shot:
                     on_target = self.target_manager.shot_is_on_target(
