@@ -34,6 +34,7 @@ class LaserDetector(object):
             edge_detected_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
         center = None
+        ret = False
         for contour in contours:
             area = cv2.contourArea(contour)
             equi_diameter = np.sqrt(4 * area / np.pi)
@@ -71,10 +72,10 @@ class LaserDetector(object):
                 if self.debug:
                     print(laser_type + " Shot! Radius: " + str(radius) + ", coords: " + "(" + str(center[0]) + "," +
                                      str(center[1]) + ")" + "\n")
+                    cv2.circle(self.frame, center, int(radius), (0, 200, 255), 2)
+                    cv2.circle(self.frame, center, 5, (255, 0, 0), -1)
 
                 x, y = center
                 ret = (x, y, radius)
-            else:
-                ret = False
 
         return ret

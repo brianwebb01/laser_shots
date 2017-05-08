@@ -26,7 +26,7 @@ class LaserShotsApp(tk.Tk):
         self.camera_res_horiz = 320
         self.camera_res_vert = 240
         self.cam_resize_multiple = 2
-        self.camera_devices = {'FaceTime HD Camera':0, 'USB Camera 1': 1}
+        #self.camera_devices = {'FaceTime HD Camera':0, 'USB Camera 1': 1}
         self.camera_devices = {'FaceTime HD Camera':0}
 
         self.init_cameras(self.camera_devices.values())
