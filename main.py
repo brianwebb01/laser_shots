@@ -21,6 +21,7 @@ class LaserShotsApp(tk.Tk):
 
     def initialize(self):
         self.debug = False
+        self.debug_wo_shots = True
         self.sidebar_width = 375
         self.frame_padding = 10
         self.camera_res_horiz = 320
@@ -139,15 +140,16 @@ class LaserShotsApp(tk.Tk):
             if self.timer.timerRunning and self.timer.elapsedTime > 0:
                 shot = LaserDetector(frame).detect(1.0, 15.0)
 
-                if shot:
-                    on_target = self.target_manager.shot_is_on_target(
-                        camera_idx, shot)
-                    if on_target > TargetManager.MISS:
-                        self.log_shot_details(self.shot_manager.log_hit(camera_idx, on_target, shot))
-                        self.sound_manager.play_sound(SoundManager.HIT)
-                    elif on_target == TargetManager.MISS:
-                        self.log_shot_details(self.shot_manager.log_miss(camera_idx, shot))
-                        self.sound_manager.play_sound(SoundManager.MISS)
+                if not self.debug_wo_shots:
+                    if shot:
+                        on_target = self.target_manager.shot_is_on_target(
+                            camera_idx, shot)
+                        if on_target > TargetManager.MISS:
+                            self.log_shot_details(self.shot_manager.log_hit(camera_idx, on_target, shot))
+                            self.sound_manager.play_sound(SoundManager.HIT)
+                        elif on_target == TargetManager.MISS:
+                            self.log_shot_details(self.shot_manager.log_miss(camera_idx, shot))
+                            self.sound_manager.play_sound(SoundManager.MISS)
 
             ShotVisualizer().draw_shots(frame, self.shot_manager.get_hits_for_camera(
                 camera_idx), self.shot_manager.get_misses_for_camera(camera_idx))

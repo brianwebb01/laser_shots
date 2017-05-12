@@ -13,8 +13,8 @@ class VideoCamera(object):
         # Using OpenCV to capture from given device. If you have trouble capturing
         # from a webcam, comment the line below out and use a video file
         # instead.
-        #self.capture = cv2.VideoCapture(device)
-        self.capture = cv2.VideoCapture("videos/laser-high-light/red-laser-high-light-sirt.mp4")
+        self.capture = cv2.VideoCapture(device)
+        #self.capture = cv2.VideoCapture("videos/laser-high-light/red-laser-high-light-sirt.mp4")
 
         if not self.capture.isOpened():
             raise Exception('Faled to Open Capture device')
