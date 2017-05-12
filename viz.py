@@ -48,11 +48,13 @@ class ShotVisualizer(object):
     def draw_hits(self, frame, hits=[]):
         color = colorsys.rgb_to_hsv(*self.hit_color)
         for _shot in hits:
-            x, y, r, t = _shot
+            x = _shot[0]
+            y = _shot[1]
             cv2.circle(frame, (x, y), self.shot_diameter, color, -1)
 
     def draw_misses(self, frame, misses=[]):
         color = colorsys.rgb_to_hsv(*self.miss_color)
         for _shot in misses:
-            x, y, r = _shot
+            x = _shot[0]
+            y = _shot[1]
             cv2.circle(frame, (x, y), self.shot_diameter, color, -1)

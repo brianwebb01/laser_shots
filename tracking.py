@@ -1,4 +1,5 @@
 import cv2
+import math
 
 class TargetManager(object):
 
@@ -132,6 +133,7 @@ class ShotManager(object):
         self.hits = {}
         self.misses = {}
         self.shotTimes = []
+        self.thresh_radius = 10.0
 
     def reset(self):
         self.hits = {}
@@ -232,3 +234,14 @@ class ShotManager(object):
             return self.misses[cam_index]
         else:
             return []      
+
+    def is_point_in_list(self, center, points_list, elapsed_frame, max_elapsed_frames):
+        if len(points_list) == 0:
+            return False
+        p = points_list[-1]
+        dis = math.sqrt((center[0]-p[0])**2 + (center[1]-p[1])**2)
+        if dis < self.thresh_radius and elapsed_frame < max_elapsed_frames:
+            points_list[-1] = center
+            return True
+
+        return False

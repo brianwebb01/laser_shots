@@ -21,14 +21,16 @@ class LaserShotsApp(tk.Tk):
 
     def initialize(self):
         self.debug = False
-        self.debug_wo_shots = True
+        self.debug_wo_shots = False
         self.sidebar_width = 375
         self.frame_padding = 10
         self.camera_res_horiz = 320
         self.camera_res_vert = 240
         self.cam_resize_multiple = 2
+        self.max_elapsed_frames = 5
+        self.elapsed_frame = 0
         #self.camera_devices = {'FaceTime HD Camera':0, 'USB Camera 1': 1}
-        self.camera_devices = {'FaceTime HD Camera':0}
+        self.camera_devices = {'FaceTime HD Camera': 0}
 
         self.init_cameras(self.camera_devices.values())
         self.target_manager = TargetManager(self.cam_resize_multiple)
@@ -41,7 +43,8 @@ class LaserShotsApp(tk.Tk):
     def init_cameras(self, devices=[0]):
         self.cameras = []
         for d in devices:
-            self.cameras.append(VideoCamera().new(d, self.camera_res_horiz, self.camera_res_vert))
+            self.cameras.append(VideoCamera().new(
+                d, self.camera_res_horiz, self.camera_res_vert))
 
     def init_gui_elements(self):
         # main window
@@ -66,7 +69,8 @@ class LaserShotsApp(tk.Tk):
             x=845, y=457)
         self.cam_sel_var = tk.StringVar(self)
         self.cam_sel_var.set(self.camera_devices.keys()[0])
-        tk.OptionMenu(self, self.cam_sel_var, *self.camera_devices.keys()).place(x=775, y=425)
+        tk.OptionMenu(self, self.cam_sel_var, *
+                      self.camera_devices.keys()).place(x=775, y=425)
 
         # shot table
         self.shotData = ttk.Treeview(self, selectmode="extended", height=17,
@@ -144,12 +148,24 @@ class LaserShotsApp(tk.Tk):
                     if shot:
                         on_target = self.target_manager.shot_is_on_target(
                             camera_idx, shot)
+
                         if on_target > TargetManager.MISS:
-                            self.log_shot_details(self.shot_manager.log_hit(camera_idx, on_target, shot))
-                            self.sound_manager.play_sound(SoundManager.HIT)
+                            hit_has_been_logged = self.shot_manager.is_point_in_list(
+                                shot, self.shot_manager.get_hits_for_camera(camera_idx), self.elapsed_frame, self.max_elapsed_frames)
+                            if not hit_has_been_logged:
+                                self.elapsed_frame = 0
+                                self.log_shot_details(self.shot_manager.log_hit(
+                                    camera_idx, on_target, shot))
+                                self.sound_manager.play_sound(SoundManager.HIT)
+
                         elif on_target == TargetManager.MISS:
-                            self.log_shot_details(self.shot_manager.log_miss(camera_idx, shot))
-                            self.sound_manager.play_sound(SoundManager.MISS)
+                            miss_has_been_logged = self.shot_manager.is_point_in_list(
+                                shot, self.shot_manager.get_misses_for_camera(camera_idx), self.elapsed_frame, self.max_elapsed_frames)
+                            if not miss_has_been_logged:
+                                self.elapsed_frame = 0
+                                self.log_shot_details(
+                                    self.shot_manager.log_miss(camera_idx, shot))
+                                self.sound_manager.play_sound(SoundManager.MISS)
 
             ShotVisualizer().draw_shots(frame, self.shot_manager.get_hits_for_camera(
                 camera_idx), self.shot_manager.get_misses_for_camera(camera_idx))
@@ -167,6 +183,8 @@ class LaserShotsApp(tk.Tk):
         self.label_timer.configure(text=self.timer.time_update())
 
         self.after(50, func=lambda: self.show_video_feeds())
+
+        self.elapsed_frame += 1
 
     def bind_cam_frame_interactions(self, widget):
         widget.bind(
@@ -186,7 +204,7 @@ class LaserShotsApp(tk.Tk):
                              text=shot_num,
                              values=(shot_time_str, split_time, target_num),
                              tags=tags)
-    
+
     def start(self):
         if self.debug:
             print "main.start"

@@ -13,7 +13,7 @@ class LaserDetector(object):
     GREEN_HSV_MAX = (80, 100, 255)
 
     def __init__(self, frame):
-        self.debug = True
+        self.debug = False
         self.frame = frame
 
     def detect(self, radius_min=1.0, radius_max=15):
