@@ -16,6 +16,18 @@ class LaserDetector(object):
         self.debug = False
         self.frame = frame
 
+    def auto_canny(self, image, sigma=0.33):
+        # compute the median of the single channel pixel intensities
+        v = np.median(image)
+    
+        # apply automatic Canny edge detection using the computed median
+        lower = int(max(0, (1.0 - sigma) * v))
+        upper = int(min(255, (1.0 + sigma) * v))
+        edged = cv2.Canny(image, lower, upper)
+    
+        # return the edged image
+        return edged
+
     def detect(self, radius_min=1.0, radius_max=15):
         """Laser shot detection function
 
@@ -27,7 +39,8 @@ class LaserDetector(object):
         bilateral_filtered_image = cv2.bilateralFilter(self.frame, 5, 175, 175)
         cv2.imshow('Bilateral', bilateral_filtered_image)
 
-        edge_detected_image = cv2.Canny(bilateral_filtered_image, 170, 250)
+        #edge_detected_image = cv2.Canny(bilateral_filtered_image, 170, 250)
+        edge_detected_image = self.auto_canny(bilateral_filtered_image)
         cv2.imshow('Edge', edge_detected_image)
 
         _, contours, hierarchy = cv2.findContours(
