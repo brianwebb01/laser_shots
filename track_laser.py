@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 import argparse
-from cv2 import cv
 import cv2
 import sys
 import numpy as np
@@ -361,8 +360,8 @@ class LaserTracker(object):
             sys.exit(1)
 
         # set the wanted image size from the camera
-        self.capture.set(cv.CV_CAP_PROP_FRAME_WIDTH, self.cam_width)
-        self.capture.set(cv.CV_CAP_PROP_FRAME_HEIGHT, self.cam_height)
+        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.cam_width)
+        self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cam_height)
 
         self.window.geometry('{}x{}'.format(int((self.cam_width + 375)), self.cam_height + 10))
 
@@ -405,7 +404,7 @@ class LaserTracker(object):
         if not self.should_log_shots:
             return
 
-        hsv_img = cv2.cvtColor(frame, cv.CV_BGR2HSV)
+        hsv_img = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
         
         LASER_MIN = colorsys.rgb_to_hsv(255,207,187)
