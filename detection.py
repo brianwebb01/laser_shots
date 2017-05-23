@@ -37,11 +37,13 @@ class LaserDetector(object):
         """
 
         bilateral_filtered_image = cv2.bilateralFilter(self.frame, 5, 175, 175)
-        cv2.imshow('Bilateral', bilateral_filtered_image)
+        if self.debug:
+            cv2.imshow('Bilateral', bilateral_filtered_image)
 
         #edge_detected_image = cv2.Canny(bilateral_filtered_image, 170, 250)
         edge_detected_image = self.auto_canny(bilateral_filtered_image)
-        cv2.imshow('Edge', edge_detected_image)
+        if self.debug:
+            cv2.imshow('Edge', edge_detected_image)
 
         _, contours, hierarchy = cv2.findContours(
             edge_detected_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
