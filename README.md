@@ -12,3 +12,7 @@ The application should log hits with a red dot and misses with a black one.  The
 sudo apt install python3-tk
 pip3 install opencv-python pygame tk
 ```
+
+## Screenshots
+
+![ss1](./readme_ss1.png)
