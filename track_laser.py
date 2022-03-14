@@ -7,14 +7,14 @@ import pygame
 import os
 import time
 import colorsys
-import Tkinter as tk
-from Tkinter import *
-import ttk
+import tkinter as tk
+from tkinter import *
+from tkinter import ttk
 from PIL import Image
 from PIL import ImageTk
 import threading
-import Queue
-import tkMessageBox
+import queue
+from tkinter import messagebox 
 
 
 class LaserTracker(object):
@@ -56,7 +56,7 @@ class LaserTracker(object):
 
 
         #threading / queue vars
-        self.camera_frame_queue = Queue.Queue()
+        self.camera_frame_queue = queue.Queue()
         self.put_frame_thread = None
         self.get_frame_thread = None
         self.is_running = False
@@ -523,7 +523,7 @@ class LaserTracker(object):
         if self.debug:
             print("Key pressed:")
             print("char: ", event.char, "keycode: ", event.keycode)
-            print "pressed", repr(event.char)
+            print("pressed " + repr(event.char))
 
         if event.char == 't':
             if self.targets:
